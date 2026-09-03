@@ -124,7 +124,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
   // 650 в ящике. Пересчитать компенсацию заново нельзя:
   // getExpenseCompensation фильтрует resultsSubmissionId: null и для уже
   // закрытой сдачи вернёт ноль.
-  const cashDelta = Math.round((nextCash - before.cashAmount) * 100) / 100;
 
   await prisma.$transaction(async (tx) => {
     // Лок точки на всю правку. Его здесь не было вовсе, хотя
@@ -136,6 +135,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
     // списывала одни деньги дважды — тот же класс гонки, что уже закрыт для
     // всех роутов инкассации и авансов.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zoneSubmission.zone.pointId}))`;
+
+    // Дельта кассы считается ЗДЕСЬ, под локом, от свежего значения строки, а
+    // не от снимка, снятого до транзакции (закрывающий аудит 2026-09-03).
+    // Иначе повторная отправка той же формы — двойной клик, две вкладки,
+    // ретрай по таймауту — брала дельту от устаревшей суммы и сдвигала
+    // выручку зоны второй раз, каждый раз на ту же величину.
+    const freshCash = Number(
+      (await tx.zoneSubmission.findUniqueOrThrow({ where: { id }, select: { cashAmount: true } })).cashAmount
+    );
+    const cashDelta = Math.round((nextCash - freshCash) * 100) / 100;
 
     for (const r of zoneSubmission.assetReadings) {
       const key = `${r.assetId}:${r.tariffId}`;

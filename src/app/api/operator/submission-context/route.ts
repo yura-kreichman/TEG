@@ -10,6 +10,9 @@ import {
   getZoneCollectionOverdraw,
 } from "@/lib/zone-balance";
 import { previousSubmissionBoundary } from "@/lib/game-room";
+import { getExpenseCompensation } from "@/lib/expense-compensation";
+import { getBusinessDayBounds } from "@/lib/business-day";
+import { getTenantDayContext } from "@/lib/tenant-day";
 
 export async function GET() {
   const ctx = await requireOperator();
@@ -130,14 +133,28 @@ export async function GET() {
   // ноль. Разбор правила — у getZoneCollectionOverdraw.
   const boundaryByZone = new Map<string, Date | null>();
   for (const zone of zones) boundaryByZone.set(zone.id, await previousSubmissionBoundary(zone.id));
-  const collectedBeforeByZone =
+  const now = new Date();
+  const rawOverdraw =
     zones.length > 0
       ? await getZoneCollectionOverdraw(
           zones.map((z) => z.id),
           boundaryByZone,
-          new Date()
+          now
         )
       : new Map<string, number>();
+  // ЗА ВЫЧЕТОМ уже компенсированных расходов — ровно как на сервере сдачи
+  // (закрывающий аудит 2026-09-03). Дефицит растёт от любой операции, что
+  // уводит кассу в минус, включая расход, а расход мастер прибавляет к
+  // «Разнице» отдельной строкой. Без вычета сотрудник видел бы излишек ровно
+  // на сумму своих трат — и это ещё до отправки, то есть подгонял бы кассу.
+  const { timezone: tz, boundary: dayBoundary } = await getTenantDayContext(point.tenantId);
+  const businessDayStart = getBusinessDayBounds(dayBoundary, now, tz).start;
+  const compensation = await getExpenseCompensation(point.id, businessDayStart, now);
+  const collectedBeforeByZone = new Map<string, number>();
+  for (const [zoneId, raw] of rawOverdraw) {
+    const compensated = compensation.compensatedByZone.get(zoneId) ?? 0;
+    collectedBeforeByZone.set(zoneId, Math.max(0, Math.round((raw - compensated) * 100) / 100));
+  }
 
   const result = zones.map((zone) => ({
     id: zone.id,

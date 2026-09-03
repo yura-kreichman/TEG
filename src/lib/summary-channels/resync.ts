@@ -366,5 +366,20 @@ export async function removeOrMarkMessage(
 ): Promise<void> {
   const deleted = await deleteChatMessage(chatId, messageId);
   if (deleted) return;
-  await editChatMessage(chatId, messageId, markedText).catch(() => {});
+  // Последнее место, где отказ Telegram проглатывался молча (закрывающий аудит
+  // 2026-09-03). Оно же самое неприятное: сюда приходят удалённые записи, и
+  // если ни удалить, ни пометить сообщение не вышло, в чате остаются висеть
+  // цифры того, чего в системе больше нет, — а узнать об этом было неоткуда.
+  const marked = await editChatMessage(chatId, messageId, markedText).catch((err) => ({
+    ok: false as const,
+    status: 0,
+    description: err instanceof Error ? err.message : String(err),
+  }));
+  if (!marked.ok) {
+    console.error("remove or mark message failed", {
+      messageId,
+      status: marked.status,
+      description: marked.description,
+    });
+  }
 }

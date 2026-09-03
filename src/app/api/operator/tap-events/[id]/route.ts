@@ -140,7 +140,13 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/
       // сотрудник мог нажать обе подряд и зачислить клиенту двойную цену, с
       // двумя минусовыми revenue_abonement в журнале. Найдено перепроверкой
       // 2026-09-03: общий помощник закрыл одну дыру и открыл эту.
-      if (!event.voidedAt) {
+      // Свежее состояние ПОД ТРАНЗАКЦИЕЙ, а не снимок, снятый до неё
+      // (закрывающий аудит 2026-09-03): между чтением и удалением параллельный
+      // PATCH мог поставить пометку «Возврат» и вернуть деньги — тогда мы
+      // вернули бы их второй раз, ровно тот сбой, который проверка и закрывает.
+      const fresh = await tx.counterTapEvent.findUnique({ where: { id }, select: { voidedAt: true } });
+      if (!fresh) throw new Error("ALREADY_GONE");
+      if (!fresh.voidedAt) {
         const refund = await refundTapPayment(tx, event, { id: point.id, tenantId: point.tenantId }, operator.id);
         refundedWalletId = refund.walletId;
         refundedAmount = refund.amount;
@@ -153,7 +159,9 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/
     // падал необработанным P2025 в generic 500 вместо аккуратного ответа
     // (вся транзакция откатывается, деньги не теряются и не задваиваются в
     // любом случае — это только про чистоту HTTP-ответа).
-    if (isRecordNotFound(err)) {
+    // ALREADY_GONE — та же гонка, только пойманная нашей проверкой раньше,
+    // чем Prisma своей: тап исчез между чтением и транзакцией.
+    if (isRecordNotFound(err) || (err instanceof Error && err.message === "ALREADY_GONE")) {
       return NextResponse.json({ error: "Запись уже удалена" }, { status: 409 });
     }
     throw err;

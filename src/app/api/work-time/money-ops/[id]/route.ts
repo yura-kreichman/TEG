@@ -58,6 +58,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   if (before !== amountNumber) {
     await prisma.$transaction(async (tx) => {
       if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+      // Сумма ДО правки читается здесь, под локом, а не снаружи транзакции:
+      // `before` снят до неё, и повторный запрос с тем же телом (двойной клик,
+      // две вкладки) посчитал бы дельту от устаревшего значения и дорисовал
+      // разницу зонам второй раз.
+      const freshBefore = Math.abs(
+        Number((await tx.moneyOperation.findUniqueOrThrow({ where: { id }, select: { amount: true } })).amount)
+      );
       await tx.moneyOperation.update({ where: { id }, data: { amount: -amountNumber } });
       await tx.correctionLog.create({
         data: {
@@ -78,8 +85,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       //
       // Только для тех типов, что реально уходят из кассы: bonus_accrual в
       // ней не участвует вовсе (CASH_EXCLUDED_TYPES).
-      if (op.pointId && op.beneficiaryOperatorId && op.type !== "bonus_accrual") {
-        const delta = Math.round((amountNumber - before) * 100) / 100;
+      //
+      // И ТОЛЬКО если деньги действительно уходили из кассы точки: признак —
+      // performedByOperatorId, «из чьих рук ушли». У записей, созданных до
+      // 2026-09-02, его нет: тогда действовало обратное правило, и по зонам
+      // они не разносились. Разнести их отмену значило бы вернуть зонам
+      // деньги, которых там никогда не списывали (закрывающий аудит).
+      if (op.pointId && op.beneficiaryOperatorId && op.performedByOperatorId && op.type !== "bonus_accrual") {
+        const delta = Math.round((amountNumber - freshBefore) * 100) / 100;
         if (delta !== 0) {
           await chargeSelfServiceAdvanceToZones(
             owner.tenantId,
@@ -141,7 +154,8 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
     // 2026-09-03) — иначе после удаления аванса касса точки растёт, а зоны
     // остаются списанными навсегда. Отрицательная сумма разворачивает
     // разнесение, ровно как это делает удаление смены.
-    if (op.pointId && beneficiaryOperatorId && op.type !== "bonus_accrual") {
+    // Только если деньги уходили из кассы — см. комментарий в PATCH выше.
+    if (op.pointId && beneficiaryOperatorId && op.performedByOperatorId && op.type !== "bonus_accrual") {
       await chargeSelfServiceAdvanceToZones(owner.tenantId, op.pointId, -before.amount, beneficiaryOperatorId, tx);
     }
   });
