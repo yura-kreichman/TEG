@@ -857,7 +857,13 @@ function cellOpacity(ratio: number) {
   return 0.35 + ratio * 0.65;
 }
 
-function CellTooltip({ value, presentValues }: { value: number; presentValues: number[] }) {
+// Подпись клетки — датой, а не только суммой (замечание владельца 2026-09-03:
+// «в этом тултипе не хватает даты»). В сетке чисел нет вовсе, и понять, что
+// синяя клетка — это 2 сентября, можно было только по позиции столбца «Ср».
+// Дата стоит В САМОМ пузыре, а не в шапке карточки: пузырь уже привязан
+// стрелкой к клетке, глаз там же, и связь «дата ↔ сумма» читается без
+// движения — тем более что пузырь шапку собой и закрывает.
+function CellTooltip({ label, value, presentValues }: { label: string; value: number; presentValues: number[] }) {
   const sorted = [...presentValues].sort((a, b) => a - b);
   const level = moodLevel(rankRatio(value, sorted));
   return (
@@ -871,6 +877,7 @@ function CellTooltip({ value, presentValues }: { value: number; presentValues: n
       // никакой связи с CELL_OPACITY ячейки, только сам уровень смайлика.
       className="absolute bottom-full left-1/2 z-50 mb-2 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap rounded-control bg-primary px-3.5 py-2 text-lg font-bold text-primary-foreground shadow-lg"
     >
+      <span className="text-[0.6875rem] font-semibold leading-none opacity-80">{label}</span>
       {level === 0 ? <Frown className="size-5" /> : level === 1 ? <Meh className="size-5" /> : <Smile className="size-5" />}
       <Money value={value} />
       <span className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-primary" />
@@ -1147,6 +1154,7 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
 }
 
 function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof useI18n> }) {
+  const locale = useLocale();
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function openTooltip(date: string) {
@@ -1205,7 +1213,13 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
                 )}
                 <span className="relative">{d.total > 0 ? Math.round(d.total / 100) / 10 + "к" : ""}</span>
                 <AnimatePresence>
-                  {activeDate === d.date && <CellTooltip value={d.total} presentValues={presentValues} />}
+                  {activeDate === d.date && (
+                    <CellTooltip
+                      label={new Date(d.date).toLocaleDateString(locale, { day: "numeric", month: "long" })}
+                      value={d.total}
+                      presentValues={presentValues}
+                    />
+                  )}
                 </AnimatePresence>
               </div>
             ))}
@@ -1294,7 +1308,15 @@ function CalendarMonthsTab({
                 )}
               </span>
               <AnimatePresence>
-                {activeMonth === mo.month && <CellTooltip value={mo.total} presentValues={presentMonthValues} />}
+                {activeMonth === mo.month && (
+                  <CellTooltip
+                    /* month у сервера 0-based (calendar/route.ts). Год не нужен —
+                       он стоит в переключателе периода над карточкой. */
+                    label={new Date(2000, mo.month, 1).toLocaleDateString(locale, { month: "long" })}
+                    value={mo.total}
+                    presentValues={presentMonthValues}
+                  />
+                )}
               </AnimatePresence>
             </div>
           ))}

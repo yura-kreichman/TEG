@@ -70,11 +70,30 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   const zoneIds = zones.map((z) => z.id);
 
-  const [submissions, abonementOps, goodsOps] = await Promise.all([
+  const [zoneRevenueOps, abonementOps, goodsOps] = await Promise.all([
+    // ВЫРУЧКА ЗОН — ИЗ ЖУРНАЛА, как в «Динамике» (замечание владельца
+    // 2026-09-03 по скриншоту: календарь показывал за 2 сентября 13 130,
+    // а «Итоги дня» за тот же день — 18 480).
+    //
+    // Раньше суммировались ZoneSubmission.cashAmount + mobileAmount, то есть
+    // только то, что сотрудник донёс до пересчёта. Деньги, забранные
+    // владельцем инкассацией среди дня, в эту сумму не попадали, и тепловая
+    // карта занижала день ровно на них — у КидсБурга на 5 350. «Динамика»
+    // рядом уже читала журнал, и две вкладки одних «Отчётов» отвечали на
+    // один вопрос по-разному.
+    //
+    // В журнале строка revenue уже валовая: сдача пишет туда «введённое плюс
+    // компенсированные расходы плюс забранное до пересчёта»
+    // (submit-results/route.ts). Поэтому здесь не добавляется третье место
+    // правды, а убирается лишнее.
     zoneIds.length
-      ? prisma.zoneSubmission.findMany({
-          where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: start, lt: end } } },
-          select: { cashAmount: true, mobileAmount: true, resultsSubmission: { select: { submittedAt: true } } },
+      ? prisma.moneyOperation.findMany({
+          where: {
+            zoneId: { in: zoneIds },
+            type: { in: ["revenue", "revenue_cashless"] },
+            occurredAt: { gte: start, lt: end },
+          },
+          select: { amount: true, occurredAt: true },
         })
       : Promise.resolve([]),
     // Абонемент — не в cashAmount/mobileAmount (касса зоны эти деньги в
@@ -108,9 +127,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   ]);
 
   const byDay = new Map<string, number>();
-  for (const s of submissions) {
-    const key = dateKey(s.resultsSubmission.submittedAt);
-    byDay.set(key, (byDay.get(key) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
+  // Знаковая сумма, НЕ Math.abs — по той же причине, что у абонементов и
+  // товаров ниже: правка сдачи и её удаление пишут компенсацию того же типа
+  // с минусом, и модуль превратил бы вычитание в прибавление.
+  for (const op of zoneRevenueOps) {
+    const key = dateKey(op.occurredAt);
+    byDay.set(key, (byDay.get(key) ?? 0) + Number(op.amount));
   }
   // Знаковая сумма, НЕ Math.abs (генеральная проверка финансов 2026-09-02,
   // К10). Аннулирование продажи — и абонемента, и товара — пишется
