@@ -77,7 +77,7 @@ async function writeShiftCashOut(
     if (!p.operator.overdraftAllowed && p.advanceAmount > projectedToPayOut) {
       throw new CashOutRefused("personal", projectedToPayOut);
     }
-    await tx.moneyOperation.create({
+    const advanceOp = await tx.moneyOperation.create({
       data: {
         tenantId: p.tenantId,
         pointId: p.pointId,
@@ -88,9 +88,19 @@ async function writeShiftCashOut(
         shiftId: p.shiftId,
       },
     });
+    // Своим вызовом на КАЖДУЮ выплату (правка 2026-09-04): строки разнесения
+    // привязываются к породившей их операции, и отмена снимает ровно их.
+    await chargeSelfServiceAdvanceToZones(
+      p.tenantId,
+      p.pointId,
+      p.advanceAmount,
+      p.operator.id,
+      tx,
+      advanceOp.id
+    );
   }
   if (p.bonusAmount > 0) {
-    await tx.moneyOperation.create({
+    const bonusOp = await tx.moneyOperation.create({
       data: {
         tenantId: p.tenantId,
         pointId: p.pointId,
@@ -103,12 +113,20 @@ async function writeShiftCashOut(
         shiftId: p.shiftId,
       },
     });
+    // Начисленная премия из кассы не уходила — разносить нечего.
+    if (!p.bonusIsAccrual) {
+      await chargeSelfServiceAdvanceToZones(
+        p.tenantId,
+        p.pointId,
+        p.bonusAmount,
+        p.operator.id,
+        tx,
+        bonusOp.id
+      );
+    }
   }
-  // Разнесение по зонам — той же транзакцией и под тем же локом (С19).
-  // cashOutAmount: начисленная премия из кассы не уходила, разносить нечего.
-  if (p.cashOutAmount > 0) {
-    await chargeSelfServiceAdvanceToZones(p.tenantId, p.pointId, p.cashOutAmount, p.operator.id, tx);
-  }
+  // Разнесение идёт той же транзакцией и под тем же локом (С19) — теперь на
+  // месте создания каждой выплаты, выше, а не одной суммой cashOutAmount.
 }
 
 export async function GET(request: Request) {

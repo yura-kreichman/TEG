@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
           throw new CashOutRefused("personal", projectedToPayOut);
         }
-        await tx.moneyOperation.create({
+        const advanceOp = await tx.moneyOperation.create({
           data: {
             tenantId: point.tenantId,
             pointId: shiftPointId,
@@ -191,9 +191,21 @@ export async function POST(request: Request) {
             shiftId: openShift.id,
           },
         });
+        // Своим вызовом на КАЖДУЮ выплату, а не одной суммой на обе: строки
+        // разнесения привязываются к породившей их операции, и отмена потом
+        // снимает ровно их (правка 2026-09-04, разбор — у
+        // chargeSelfServiceAdvanceToZones).
+        await chargeSelfServiceAdvanceToZones(
+          point.tenantId,
+          shiftPointId,
+          advanceAmount,
+          operator.id,
+          tx,
+          advanceOp.id
+        );
       }
       if (bonusAmount > 0) {
-        await tx.moneyOperation.create({
+        const bonusOp = await tx.moneyOperation.create({
           data: {
             tenantId: point.tenantId,
             pointId: shiftPointId,
@@ -207,15 +219,22 @@ export async function POST(request: Request) {
             shiftId: openShift.id,
           },
         });
+        // Начисленная премия из кассы точки не уходила — разносить нечего.
+        if (!bonusIsAccrual) {
+          await chargeSelfServiceAdvanceToZones(
+            point.tenantId,
+            shiftPointId,
+            bonusAmount,
+            operator.id,
+            tx,
+            bonusOp.id
+          );
+        }
       }
-      // Разнесение по зонам — ТОЙ ЖЕ транзакцией и под тем же локом. Раньше
-      // функция открывала свою, и в зазоре между коммитами инкассация успевала
-      // списать те же деньги через poolDeficit, а разнесение списывало их
-      // второй раз. cashOutAmount, не advance+bonus: начисленная премия из
-      // кассы точки не уходила, разносить нечего.
-      if (cashOutAmount > 0) {
-        await chargeSelfServiceAdvanceToZones(point.tenantId, shiftPointId, cashOutAmount, operator.id, tx);
-      }
+      // Разнесение по зонам идёт ТОЙ ЖЕ транзакцией и под тем же локом — но
+      // теперь прямо на месте создания каждой выплаты, выше. Раньше оно стояло
+      // здесь одной суммой cashOutAmount на обе выплаты, и привязать строки к
+      // конкретной из них было нельзя.
     }
       return { ok: true as const };
     })

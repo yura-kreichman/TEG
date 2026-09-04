@@ -5,7 +5,7 @@ import { calcOperatorBalance, WORK_TIME_MONEY_TYPES, type WorkTimeMoneyType } fr
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
-import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
+import { resettlePayoutToZones } from "@/lib/zone-balance";
 
 // Правка суммы отдельного (не привязанного к смене) аванса/премии —
 // docs/spec/05-work-time.md, "АВАНС"/"ПРЕМИЯ": "владелец может редактировать".
@@ -91,17 +91,21 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       // 2026-09-02, его нет: тогда действовало обратное правило, и по зонам
       // они не разносились. Разнести их отмену значило бы вернуть зонам
       // деньги, которых там никогда не списывали (закрывающий аудит).
+      //
+      // Пересчитываем ПОЛНОСТЬЮ, а не дельтой (правка 2026-09-04): дельта
+      // раскладывалась по остаткам зон на момент правки, а списание — по
+      // остаткам на момент выплаты, и деньги возвращались не в те зоны.
+      // Разбор — у resettlePayoutToZones.
       if (op.pointId && op.beneficiaryOperatorId && op.performedByOperatorId && op.type !== "bonus_accrual") {
-        const delta = Math.round((amountNumber - freshBefore) * 100) / 100;
-        if (delta !== 0) {
-          await chargeSelfServiceAdvanceToZones(
-            owner.tenantId,
-            op.pointId,
-            delta,
-            op.beneficiaryOperatorId,
-            tx
-          );
-        }
+        await resettlePayoutToZones(
+          tx,
+          owner.tenantId,
+          op.pointId,
+          op.beneficiaryOperatorId,
+          id,
+          freshBefore,
+          amountNumber
+        );
       }
     });
     // Сводка смены и "Касса за день" содержат эту сумму — догоняем их
@@ -166,8 +170,14 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
     // остаются списанными навсегда. Отрицательная сумма разворачивает
     // разнесение, ровно как это делает удаление смены.
     // Только если деньги уходили из кассы — см. комментарий в PATCH выше.
+    //
+    // Снимаем РОВНО те строки, которые создало списание (правка 2026-09-04):
+    // прежний возврат отрицательной суммой раскладывался по остаткам зон на
+    // момент удаления, а это уже другие веса — деньги возвращались не туда,
+    // откуда ушли. Связь по settlesOperationId переживает удаление самой
+    // операции: она свободная, без внешнего ключа.
     if (op.pointId && beneficiaryOperatorId && op.performedByOperatorId && op.type !== "bonus_accrual") {
-      await chargeSelfServiceAdvanceToZones(owner.tenantId, op.pointId, -freshAmount, beneficiaryOperatorId, tx);
+      await resettlePayoutToZones(tx, owner.tenantId, op.pointId, beneficiaryOperatorId, id, freshAmount, 0);
     }
   });
 

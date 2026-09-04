@@ -12,7 +12,7 @@ import {
 import { sendPushToOperators } from "@/lib/push-notifications";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
-import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
+import { resettlePayoutToZones } from "@/lib/zone-balance";
 import { resyncDailyCashForPoint, resyncShiftCloseMessage } from "@/lib/summary-channels/resync";
 import { getShiftEditWindow } from "@/lib/edit-window";
 
@@ -198,7 +198,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const shiftPointId = shift.pointId;
   const shiftOperatorId = shift.operatorId;
 
-  let advanceDelta = 0;
   let overlapConflict = false;
   let overdraftAvailable: number | null = null;
   try {
@@ -269,19 +268,25 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
         }
       }
 
+      // Возвращает id операции — существующей, созданной или только что
+      // удалённой (правка 2026-09-04). Он нужен разнесению по зонам ниже:
+      // строки привязываются к породившей их выплате, и снимать их надо по
+      // той же связи. У удалённой связь переживает саму запись — она
+      // свободная, без внешнего ключа.
       const syncLinkedOp = async (
         existing: typeof freshAdvanceOp,
         type: (typeof WORK_TIME_MONEY_TYPES)[number],
         amount: number
-      ) => {
+      ): Promise<string | null> => {
         if (amount > 0) {
           if (existing) {
             await tx.moneyOperation.update({
               where: { id: existing.id },
               data: { amount: storedAmountFor(type, amount) },
             });
+            return existing.id;
           } else {
-            await tx.moneyOperation.create({
+            const created = await tx.moneyOperation.create({
               data: {
                 tenantId,
                 pointId: shiftPointId,
@@ -311,14 +316,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
                 shiftId,
               },
             });
+            return created.id;
           }
         } else if (existing) {
           await tx.moneyOperation.delete({ where: { id: existing.id } });
+          return existing.id;
         }
+        return null;
       };
 
-      await syncLinkedOp(freshAdvanceOp, "advance", nextAdvance);
-      await syncLinkedOp(freshBonusOp, "bonus_payout", nextBonus);
+      const advanceOpId = await syncLinkedOp(freshAdvanceOp, "advance", nextAdvance);
+      const bonusOpId = await syncLinkedOp(freshBonusOp, "bonus_payout", nextBonus);
       // Начисленная премия — та же синхронизация, но в зонное разнесение
       // ниже она НЕ попадает ни при каких условиях: из кассы точки по ней
       // ничего не уходило, разносить нечего (см. CASH_EXCLUDED_TYPES).
@@ -345,10 +353,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       const bonusFromPointCash = freshBonusOp
         ? freshBonusOp.performedByOperatorId != null
         : nextBonus > 0;
-      advanceDelta =
-        (advanceFromPointCash ? nextAdvance - freshCurrentAdvance : 0) +
-        (bonusFromPointCash ? nextBonus - freshCurrentBonus : 0);
-
       if (changed) {
         await tx.correctionLog.create({
           data: {
@@ -372,8 +376,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       // проверка финансов 2026-09-02, С19): раньше вызов стоял после коммита и
       // открывал свою транзакцию — в зазор успевала инкассация и списывала те
       // же деньги вторым разом.
-      if (advanceDelta !== 0) {
-        await chargeSelfServiceAdvanceToZones(tenantId, shiftPointId, advanceDelta, shiftOperatorId, tx);
+      //
+      // С 2026-09-04 — не дельтой, а полным перераскладыванием каждой выплаты
+      // по её собственной связи: дельта считала доли по остаткам зон на момент
+      // правки, а списание — по остаткам на момент выплаты, и деньги уходили
+      // не в те зоны (разбор — у resettlePayoutToZones). Записи без связи
+      // помощник обрабатывает по-прежнему дельтой — внутри себя.
+      for (const [opId, fromPointCash, prev, next] of [
+        [advanceOpId, advanceFromPointCash, freshCurrentAdvance, nextAdvance],
+        [bonusOpId, bonusFromPointCash, freshCurrentBonus, nextBonus],
+      ] as const) {
+        if (!opId || !fromPointCash || prev === next) continue;
+        await resettlePayoutToZones(tx, tenantId, shiftPointId, shiftOperatorId, opId, prev, next);
       }
     });
   } catch (err) {
@@ -521,13 +535,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
     // остатки навсегда остались бы заниженными.
     const freshOps = await tx.moneyOperation.findMany({
       where: { shiftId: id, type: { in: WORK_TIME_MONEY_TYPES } },
-      select: { type: true, amount: true, performedByOperatorId: true },
+      select: { id: true, type: true, amount: true, performedByOperatorId: true },
     });
     const freshAdvance = freshOps.find((o) => o.type === "advance");
     const freshBonus = freshOps.find((o) => o.type === "bonus_payout");
-    const deletedTotal =
-      (freshAdvance?.performedByOperatorId != null ? Math.abs(Number(freshAdvance.amount)) : 0) +
-      (freshBonus?.performedByOperatorId != null ? Math.abs(Number(freshBonus.amount)) : 0);
     // Вместе со сменой удаляется и начисленная премия: она живёт только как
     // строка журнала, привязанная к смене, и без неё осталась бы навсегда
     // завышать баланс "к выдаче" — след без источника.
@@ -543,8 +554,23 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
       },
     });
     await tx.shift.delete({ where: { id } });
-    if (deletedTotal > 0) {
-      await chargeSelfServiceAdvanceToZones(owner.tenantId, shift.pointId, -deletedTotal, shift.operatorId, tx);
+    // Снимаем разнесение КАЖДОЙ выплаты по её собственной связи (правка
+    // 2026-09-04): прежний возврат одной отрицательной суммой раскладывался
+    // по остаткам зон на момент удаления, а это другие веса, чем при
+    // списании, — деньги возвращались не туда, откуда ушли. Разбор — у
+    // resettlePayoutToZones. Записям без связи (созданы раньше) помощник сам
+    // откатится на прежнее поведение дельтой.
+    for (const op of [freshAdvance, freshBonus]) {
+      if (!op || op.performedByOperatorId == null) continue;
+      await resettlePayoutToZones(
+        tx,
+        owner.tenantId,
+        shift.pointId,
+        shift.operatorId,
+        op.id,
+        Math.abs(Number(op.amount)),
+        0
+      );
     }
   });
 

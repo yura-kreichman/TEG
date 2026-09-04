@@ -626,7 +626,28 @@ export async function chargeSelfServiceAdvanceToZones(
   // pg_advisory_xact_lock по этой же точке: лок берётся на транзакцию, а
   // вложенный prisma.$transaction — это другое соединение, и получился бы
   // самодедлок до таймаута.
-  client?: Tx
+  client?: Tx,
+  // id операции, породившей это разнесение (правка 2026-09-04). Ставится в
+  // settlesOperationId каждой строки — тем же приёмом и тем же полем, что уже
+  // связывает погашение «Авансовой инкассации» с самой инкассацией.
+  //
+  // Без связи отмена не отменяла. Списание и возврат считали доли ЗАНОВО, по
+  // остаткам зон на свой момент, — а списание эти остатки как раз и меняло,
+  // поэтому деньги возвращались не туда, откуда их взяли. Керен Центр,
+  // 4 сентября: аванс создавали и удаляли трижды,
+  //
+  //   21:31 сняли    Халабуда −2355,00   Кто?Где?Куда? −3690,66
+  //   21:32 вернули  всем пяти зонам примерно поровну (+1210)
+  //
+  // По точке сумма сошлась в ноль, а по зонам осталась дыра: «Кто?Где?Куда?»
+  // ушла в −220,66, соседние зоны раздулись на ту же величину. Перекос
+  // 1270,66 из трёх попыток. Отрицательный остаток зоны потом читается как
+  // «забрали до пересчёта» и возвращается в выручку следующей сдачи, так что
+  // косметикой это не оставалось.
+  //
+  // Со связью отмена стала точной: reversePayoutSettlement удаляет ровно те
+  // строки, которые списание и создало (см. рядом).
+  settlesOperationId?: string | null
 ): Promise<void> {
   if (amount === 0) return;
 
@@ -651,6 +672,7 @@ export async function chargeSelfServiceAdvanceToZones(
         type: "advance_settlement",
         amount: sign * Math.abs(shares[i]),
         performedByOperatorId,
+        ...(settlesOperationId ? { settlesOperationId } : {}),
       }))
       .filter((row) => row.amount !== 0);
 
@@ -661,6 +683,63 @@ export async function chargeSelfServiceAdvanceToZones(
 
   if (client) await run(client);
   else await prisma.$transaction(run);
+}
+
+/**
+ * Снимает разнесение конкретного аванса/премии по зонам — удаляет ровно те
+ * строки, которые создало списание, а не считает доли заново.
+ *
+ * Возвращает true, если связанные строки нашлись. Для записей, созданных ДО
+ * появления связи (2026-09-04), вернёт false — вызывающий откатывается на
+ * прежнее приблизительное поведение, потому что найти их строки нечем.
+ * Бэкфилла нет намеренно: у старых разнесений не осталось признака, по
+ * которому их можно достоверно приписать конкретной выплате.
+ *
+ * Тот же приём и то же поле, что у reverseCollectionAdvanceSettlement выше.
+ */
+export async function reversePayoutSettlement(tx: Tx, payoutOperationId: string): Promise<boolean> {
+  const { count } = await tx.moneyOperation.deleteMany({
+    where: { settlesOperationId: payoutOperationId, type: "advance_settlement" },
+  });
+  return count > 0;
+}
+
+/**
+ * Правка или удаление выплаты: снимаем её прежнее разнесение целиком и
+ * раскладываем НОВУЮ сумму заново. `nextAmount` = 0 означает удаление.
+ *
+ * Почему не дельтой, как было раньше. Дельта раскладывается по остаткам зон
+ * НА МОМЕНТ ПРАВКИ, а списание раскладывалось по остаткам на момент выплаты —
+ * это разные веса, и деньги возвращались не в те зоны, из которых ушли. По
+ * точке сходилось, по зонам копился перекос (Керен Центр, 2026-09-04: три
+ * попытки провести один аванс оставили −220,66 на одной зоне и столько же
+ * лишку на соседних).
+ *
+ * Для записей БЕЗ связи (созданы до 2026-09-04) остаётся прежнее поведение
+ * дельтой: их строк не найти, и полное перераскладывание вернуло бы зонам
+ * деньги, которых у них никогда не списывали.
+ */
+export async function resettlePayoutToZones(
+  tx: Tx,
+  tenantId: string,
+  pointId: string,
+  operatorId: string,
+  payoutOperationId: string,
+  previousAmount: number,
+  nextAmount: number
+): Promise<void> {
+  // previousAmount === 0 — выплаты раньше не было вовсе (правка смены только
+  // что её создала), разносить с нуля можно смело и сразу со связью.
+  if ((await reversePayoutSettlement(tx, payoutOperationId)) || previousAmount === 0) {
+    if (nextAmount > 0) {
+      await chargeSelfServiceAdvanceToZones(tenantId, pointId, nextAmount, operatorId, tx, payoutOperationId);
+    }
+    return;
+  }
+  const delta = Math.round((nextAmount - previousAmount) * 100) / 100;
+  if (delta !== 0) {
+    await chargeSelfServiceAdvanceToZones(tenantId, pointId, delta, operatorId, tx);
+  }
 }
 
 // Сколько из остатка кассы точки — продажи абонементов наличными, ещё НЕ
