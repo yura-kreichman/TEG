@@ -1212,8 +1212,19 @@ export default function ReadingsCalendarPage() {
                         Показываем ВСЕГДА, а не только при расходах: старое
                         условие прятало остаток в обычный день без трат —
                         именно тогда, когда свести кассу проще всего.
-                        Размен — только когда он есть: нулевая строка ничего
-                        не сообщает. На «Разницу» не влияет ни то, ни другое. */}
+                        На «Разницу» не влияет ни то, ни другое.
+
+                        Размен — тоже ВСЕГДА, включая ноль (решение владельца
+                        2026-09-04). Прежнее «нулевая строка ничего не
+                        сообщает» здесь неверно: ноль сообщает ровно то, из-за
+                        чего и завели разговор. 3 сентября владелец внёс
+                        разменом 450 утром, вечерняя инкассация забрала их
+                        вместе с выручкой (16 700 = 16 250 + 450) — и строка
+                        исчезла, как будто размена в тот день не было вовсе.
+                        Это та же болезнь, что была у «Инкассации» выше:
+                        строка пряталась ровно в том случае, ради которого
+                        она и нужна. Пара «Размен в кассе / Наличных в кассе»
+                        теперь постоянная и предсказуемая. */}
                     {/* Все инкассации дня — зонные плюс свипы касс Абонементов
                         и Товаров (вопрос владельца 2026-09-04 по Игроленду:
                         «наличные 16 250, а в кассе 0 — почему?»). Раньше эта
@@ -1248,21 +1259,16 @@ export default function ReadingsCalendarPage() {
                         </span>
                       </div>
                     )}
-                    {changeFundInTill > 0 && (
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
-                          <Coins className="size-3.5 shrink-0" />
-                          {t.readings.changeFundInTillLabel}
-                        </span>
-                        <span className="text-foreground"><Money value={changeFundInTill} /></span>
-                      </div>
-                    )}
-                    <div
-                      className={cn(
-                        "flex items-center justify-between pt-1.5",
-                        changeFundInTill > 0 ? "border-t border-border" : "border-t border-primary/20"
-                      )}
-                    >
+                    <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                      <span className="flex items-center gap-1.5">
+                        <Coins className="size-3.5 shrink-0" />
+                        {t.readings.changeFundInTillLabel}
+                      </span>
+                      <span className="text-foreground"><Money value={changeFundInTill} /></span>
+                    </div>
+                    {/* Разделитель постоянный: строка размена больше не
+                        исчезает, и выбирать между двумя рамками не из чего. */}
+                    <div className="flex items-center justify-between border-t border-border pt-1.5">
                       <span className="flex items-center gap-1.5 text-caption-airbnb">
                         {t.readings.cashInTillLabel}
                         <InfoTooltip text={t.readings.cashInTillTooltip} />
