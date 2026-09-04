@@ -1023,49 +1023,79 @@ export default function ReadingsCalendarPage() {
                 </div>
               )}
 
+              {/* Главная плашка экрана (решение владельца 2026-09-04: «она
+                  основная — существенная», «фон, элементы дизайна, используй
+                  всё»). Отсюда и вес: сплошной акцент вместо прежней
+                  10-процентной подложки, радиус блока вместо карточного,
+                  поднятая тень. Соседние карточки — «Товары», «Абонементы»,
+                  зоны — остаются обычными белыми, и разница в весе как раз
+                  и говорит, что здесь итог, а там детали.
+
+                  Всё, что рисует цвет, взято из пары --primary /
+                  --primary-foreground: она определена у КАЖДОГО пресета
+                  акцента и в обеих темах, поэтому плашка не сломается ни у
+                  зелёного тенанта, ни в тёмной теме — там акцент светлый, а
+                  парный текст тёмный, и контраст сохраняется сам. */}
+
               {selectedDate && cards !== null && cards.length > 0 && (
-                <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1 border-primary/20 bg-primary/10">
+                <SpringCard
+                  hover={false}
+                  className="relative isolate mt-3.5 flex flex-col gap-1 overflow-hidden rounded-block border-transparent bg-primary text-primary-foreground shadow-card-hover"
+                >
+                  {/* Фоновый слой: два мягких световых пятна из того же белого,
+                      что и текст. Дают объём вместо плоской заливки и слегка
+                      подсвечивают верх карточки, где заголовок, и низ, где
+                      итоговая сумма. aria-hidden + pointer-events-none —
+                      чистая декорация, экранному диктору и мыши невидима. */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -right-20 -top-24 -z-10 size-64 rounded-full bg-primary-foreground/10 blur-2xl"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -bottom-16 -left-16 -z-10 size-48 rounded-full bg-primary-foreground/[0.07] blur-2xl"
+                  />
                   <div className="flex items-center gap-2">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/20 text-primary">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-foreground/15 text-primary-foreground">
                       <FileText className="size-4.5" />
                     </div>
                     <div>
                       <p className="text-card-title">{t.readings.daySummaryTitle}</p>
-                      <p className="text-caption-airbnb text-muted-foreground">{t.readings.daySummaryHint}</p>
+                      <p className="text-caption-airbnb text-primary-foreground/70">{t.readings.daySummaryHint}</p>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1 border-t border-primary/20 pt-2 tabular-nums">
+                  <div className="flex flex-col gap-1 border-t border-primary-foreground/20 pt-2 tabular-nums">
                     <div className="flex items-center justify-between text-caption-airbnb">
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-primary-foreground/75">
                         <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                         {t.operatorApp.submit.cashLabel}
                       </span>
-                      <span className="flex items-center gap-1.5 text-foreground">
+                      <span className="flex items-center gap-1.5 text-primary-foreground">
                         <Money value={cashRevenue} />
                         {cashPercent !== null && (
-                          <span className="text-muted-foreground tabular-nums">{cashPercent}%</span>
+                          <span className="text-primary-foreground/55 tabular-nums">{cashPercent}%</span>
                         )}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-caption-airbnb">
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-primary-foreground/75">
                         <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                         {t.operatorApp.submit.mobileLabel}
                       </span>
-                      <span className="flex items-center gap-1.5 text-foreground">
+                      <span className="flex items-center gap-1.5 text-primary-foreground">
                         <Money value={daySummary.mobile} />
                         {mobilePercent !== null && (
-                          <span className="text-muted-foreground tabular-nums">{mobilePercent}%</span>
+                          <span className="text-primary-foreground/55 tabular-nums">{mobilePercent}%</span>
                         )}
                       </span>
                     </div>
                     {daySummary.abonement > 0 && (
                       <div className="flex items-center justify-between text-caption-airbnb">
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-primary-foreground/75">
                           <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
                           {t.operatorApp.abonement.paymentLabel}
                         </span>
-                        <span className="text-foreground"><Money value={daySummary.abonement} /></span>
+                        <span className="text-primary-foreground"><Money value={daySummary.abonement} /></span>
                       </div>
                     )}
                     {/* Применимость — по режиму учёта (у зоны «Только касса»
@@ -1078,15 +1108,15 @@ export default function ReadingsCalendarPage() {
                         Тем же решением, что и у размена в кассе, — плашка не
                         должна нести строки, которые ничего не сообщают. */}
                     {cards.some(returnsApplicable) && daySummary.returnsCount > 0 && (
-                      <div className="flex items-center justify-between text-caption-airbnb">
+                      <div className="text-primary-foreground/60 flex items-center justify-between text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
                           <RefreshCcw className="size-3.5 shrink-0" />
                           {t.operatorApp.submit.returnsLabelShort}
                         </span>
-                        <span className="text-foreground">{daySummary.returnsCount}</span>
+                        <span className="">{daySummary.returnsCount}</span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb">
+                    <div className="text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/25 pt-1.5 text-caption-airbnb">
                       {/* Оплаченное с баланса вычтено (решение владельца
                           2026-08-16: «расчётная выручка тоже не должна
                           учитывать оплату по балансу, нет смысла») — экран
@@ -1095,7 +1125,7 @@ export default function ReadingsCalendarPage() {
                           ниже, без промежуточных строк. В самих счётчиках
                           валовая выручка не меняется — это только отображение
                           денежной части (docs/spec/01-counters.md). */}
-                      <span>{t.operatorApp.submit.calculatedRevenue}</span>
+                      <span className="text-primary-foreground/75">{t.operatorApp.submit.calculatedRevenue}</span>
                       <span>
                         <Money value={Math.round((daySummary.calculatedRevenue - daySummary.abonementInCash) * 100) / 100} />
                       </span>
@@ -1127,11 +1157,11 @@ export default function ReadingsCalendarPage() {
                         экране «Фактическая касса» осталась: там он вводит
                         именно пересчитанный ящик. */}
                     <div className="flex items-center justify-between text-body-airbnb font-bold">
-                      <span className="flex items-center gap-1.5 text-foreground">
+                      <span className="flex items-center gap-1.5 text-primary-foreground">
                         {t.readings.actualRevenueLabel}
-                        <InfoTooltip text={t.readings.actualCashTooltip} />
+                        <InfoTooltip className="text-primary-foreground/70 hover:text-primary-foreground" text={t.readings.actualCashTooltip} />
                       </span>
-                      <span className="text-foreground">
+                      <span className="text-primary-foreground">
                         {/* + забранное владельцем ДО пересчёта (вопрос владельца
                             2026-09-03: «в итогах дня 2945, хотя по факту было
                             больше»). Без этого слагаемого экран противоречил сам
@@ -1155,11 +1185,11 @@ export default function ReadingsCalendarPage() {
                         вычтен сотрудником из введённого остатка. */}
                     {expenses.total > 0 && (
                       <div className="flex items-center justify-between text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5 text-primary-foreground/75">
                           <ShoppingCart className="size-3.5 shrink-0" />
                           {t.summaryText.expenses}
                         </span>
-                        <span className="font-bold text-foreground">
+                        <span className="font-bold text-primary-foreground">
                           −<Money value={expenses.total} />
                         </span>
                       </div>
@@ -1173,22 +1203,29 @@ export default function ReadingsCalendarPage() {
                         2026-07-19: "Фактическая выручка и Выручка после
                         возвратов это одно и то же"). */}
                     <div className="flex items-center justify-between text-caption-airbnb">
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 text-primary-foreground/75">
                         {t.operatorApp.submit.difference}
                         {/* Предупреждающий треугольник остаётся отдельно и
                             рядом: это сигнал «не сошлось», а не справка, и
                             прятать его в тултип нельзя. */}
-                        <InfoTooltip text={t.readings.differenceTooltip} />
+                        <InfoTooltip className="text-primary-foreground/70 hover:text-primary-foreground" text={t.readings.differenceTooltip} />
                         {daySummary.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
                       </span>
+                      {/* На акцентной подложке цветом «зелёный излишек /
+                          красная недостача» больше не различить: и то и
+                          другое на синем становится грязным пятном, а
+                          text-primary вовсе слился бы с фоном. Ненулевая
+                          Разница выделяется ИНВЕРСИЕЙ — белая плашка с
+                          акцентным текстом, самое заметное сочетание, какое
+                          на этой карточке вообще возможно. Знак «+» и
+                          предупреждающий треугольник слева по-прежнему
+                          отличают излишек от недостачи. */}
                       <span
                         className={cn(
                           "font-bold",
                           daySummary.difference === 0
-                            ? "text-muted-foreground"
-                            : daySummary.difference > 0
-                              ? "text-primary"
-                              : "text-destructive"
+                            ? "text-primary-foreground/70"
+                            : "rounded-full bg-primary-foreground px-2 py-0.5 text-primary"
                         )}
                       >
                         {daySummary.difference > 0 ? "+" : ""}
@@ -1196,12 +1233,12 @@ export default function ReadingsCalendarPage() {
                       </span>
                     </div>
                     {payouts > 0 && (
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5 text-primary-foreground/75">
                           <Wallet className="size-3.5 shrink-0" />
                           {t.summaryText.bonusesAndAdvances}
                         </span>
-                        <span className="font-bold text-foreground">
+                        <span className="font-bold text-primary-foreground">
                           −<Money value={payouts} />
                         </span>
                       </div>
@@ -1260,12 +1297,12 @@ export default function ReadingsCalendarPage() {
                         забрали 11 400, и лишние 1 400 пришли со вчера. Без
                         строки плашка задавала бы тот же вопрос заново. */}
                     {cashAtDayStart !== 0 && (
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                      <div className="text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
                           <Wallet className="size-3.5 shrink-0" />
                           {t.readings.cashAtDayStartLabel}
                         </span>
-                        <span className="text-foreground">
+                        <span className="">
                           <Money value={cashAtDayStart} />
                         </span>
                       </div>
@@ -1293,46 +1330,50 @@ export default function ReadingsCalendarPage() {
                       .map(([label, value]) => (
                         <div
                           key={label}
-                          className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb"
+                          className="flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb text-primary-foreground/60"
                         >
                           <span className="flex items-center gap-1.5">
                             <Coins className="size-3.5 shrink-0" />
                             {label}
                           </span>
-                          <span className="text-foreground">
+                          <span>
                             +<Money value={value} />
                           </span>
                         </div>
                       ))}
                     {collections > 0 && (
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5 text-primary-foreground/75">
                           <Landmark className="size-3.5 shrink-0" />
                           {t.summaryText.collectionLabel}
                         </span>
-                        <span className="font-bold text-foreground">
+                        <span className="font-bold text-primary-foreground">
                           −<Money value={collections} />
                         </span>
                       </div>
                     )}
                     {changeFundInTill > 0 && (
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                      <div className="text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
                           <Coins className="size-3.5 shrink-0" />
                           {t.readings.changeFundInTillLabel}
                         </span>
-                        <span className="text-foreground"><Money value={changeFundInTill} /></span>
+                        <span className=""><Money value={changeFundInTill} /></span>
                       </div>
                     )}
-                    <div
-                      className={cn(
-                        "flex items-center justify-between pt-1.5",
-                        changeFundInTill > 0 ? "border-t border-border" : "border-t border-primary/20"
-                      )}
-                    >
-                      <span className="flex items-center gap-1.5 text-caption-airbnb">
+                    {/* Итоговая строка — на светлой подложке внутри акцентной
+                        карточки (решение владельца 2026-09-04: «выделить явно
+                        ключевые строки»). На сплошном акценте всё стало одного
+                        цвета, и прежняя иерархия «серая подпись → тёмное число
+                        → крупный итог» держалась только на размере шрифта.
+                        Подложка возвращает ответ на главный вопрос экрана —
+                        сколько денег в ящике — на своё место. Отрицательные
+                        поля вокруг (-mx-*) выводят её на всю ширину карточки,
+                        под её внутренний отступ. */}
+                    <div className="-mx-4.5 -mb-4.5 mt-1.5 flex items-center justify-between rounded-b-block bg-primary-foreground/12 px-4.5 py-3.5">
+                      <span className="flex items-center gap-1.5 text-caption-airbnb text-primary-foreground/80">
                         {t.readings.cashInTillLabel}
-                        <InfoTooltip text={t.readings.cashInTillTooltip} />
+                        <InfoTooltip className="text-primary-foreground/70 hover:text-primary-foreground" text={t.readings.cashInTillTooltip} />
                       </span>
                       {/* size="display" — шрифт ужимается по длине числа
                           (запрос владельца 2026-08-16: "если будет
@@ -1340,7 +1381,7 @@ export default function ReadingsCalendarPage() {
                           что у заголовочных сумм в Отчётах; фиксированный
                           размер оставлять нельзя — семизначная сумма
                           ломает строку. */}
-                      <span className="text-[1.5625rem] font-bold leading-none text-foreground">
+                      <span className="text-[1.5625rem] font-bold leading-none text-primary-foreground">
                         <Money value={cashOnHand} size="display" />
                       </span>
                     </div>
@@ -1353,14 +1394,14 @@ export default function ReadingsCalendarPage() {
                       нет расчётной пары для сверки. Показываем только когда
                       абонементы вообще продавались в этот день. */}
                     {(abonementSales?.cash ?? 0) + (abonementSales?.mobile ?? 0) > 0 && (
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                      <div className="flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
                         <span>{t.readings.pointCashWithAbonementLabel}</span>
                         {/* Сумма — вдвое крупнее подписи (0.78125rem × 2 =
                             1.5625rem), запрос пользователя 2026-07-19.
                             size="display" — та же защита от длинных чисел, что
                             у "Осталось наличными" выше (2026-08-16): эта сумма
                             заведомо больше, значит переполнится раньше. */}
-                        <span className="text-[1.5625rem] font-bold leading-none text-foreground">
+                        <span className="text-[1.5625rem] font-bold leading-none text-primary-foreground">
                           <Money
                             size="display"
                             value={
