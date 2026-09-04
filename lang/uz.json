@@ -1115,6 +1115,8 @@
     "changeFundInTillLabel": "Kassadagi mayda pul",
     "pointCashWithAbonementLabel": "Nuqta kassasi abonementlar bilan:",
     "cashInTillLabel": "Kassadagi naqd:",
+    "cashAtDayStartLabel": "Oldingi kundan qolgan qoldiq",
+    "changeFundAddedLabel": "Maydalash puli kiritildi",
     "actualRevenueLabel": "Haqiqiy tushum:",
     "cashInTillTooltip": "Shu kun oxirida tortmada qancha naqd pul bor: naqd tushum ustiga maydalash fondi, minus kassadan olingan xarajatlar, avanslar va mukofotlar, hamda minus inkassatsiyalar olib ketgan hamma narsa. Karta va balans orqali to'lovlar bunga kirmaydi — u pul kassada yo'q. Xuddi shu son hisobotda «Nuqtadagi naqd pul qoldig'i» qatori bilan keladi.",
     "abonementSalesTitle": "Abonementlar",

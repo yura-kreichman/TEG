@@ -1115,6 +1115,8 @@
     "changeFundInTillLabel": "Fundusz rozmienny w kasie",
     "pointCashWithAbonementLabel": "Kasa punktu z abonamentami:",
     "cashInTillLabel": "Gotówka w kasie:",
+    "cashAtDayStartLabel": "Saldo z poprzedniego dnia",
+    "changeFundAddedLabel": "Dodano rozmienne",
     "actualRevenueLabel": "Rzeczywisty utarg:",
     "cashInTillTooltip": "Ile gotówki fizycznie jest w szufladzie na koniec tego dnia: utarg gotówkowy plus fundusz rozmienny, minus wydatki, zaliczki i premie wzięte z kasy oraz minus wszystko, co zabrały inkasacje. Płatności kartą i z salda nie wchodzą — tych pieniędzy w kasie nie ma. Ta sama liczba przychodzi w wierszu «Gotówka w punkcie» w podsumowaniu.",
     "abonementSalesTitle": "Abonamenty",

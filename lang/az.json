@@ -1115,6 +1115,8 @@
     "changeFundInTillLabel": "Kassadakı xırda pul",
     "pointCashWithAbonementLabel": "Nöqtənin kassası abonementlərlə:",
     "cashInTillLabel": "Kassadakı nağd:",
+    "cashAtDayStartLabel": "Əvvəlki gündən qalan qalıq",
+    "changeFundAddedLabel": "Xırda pul əlavə edildi",
     "actualRevenueLabel": "Faktiki gəlir:",
     "cashInTillTooltip": "Bu günün sonunda çekmecədə fiziki olaraq nə qədər nağd var: nağd gəlir üstəgəl xırda pul fondu, çıxılmaqla kassadan götürülən xərclər, avanslar və mükafatlar, həmçinin inkassasiyaların apardığı hər şey. Kart və balans ödənişləri bura daxil deyil — o pul kassada yoxdur. Eyni rəqəm hesabatda «Nöqtədə nağd qalıq» sətri ilə gəlir.",
     "abonementSalesTitle": "Abonementlər",

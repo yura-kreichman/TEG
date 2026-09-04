@@ -1115,6 +1115,8 @@
     "changeFundInTillLabel": "Fond de rest în casă",
     "pointCashWithAbonementLabel": "Casa punctului cu abonamente:",
     "cashInTillLabel": "Numerar în casă:",
+    "cashAtDayStartLabel": "Sold din ziua precedentă",
+    "changeFundAddedLabel": "Fond de rest adăugat",
     "actualRevenueLabel": "Încasare efectivă:",
     "cashInTillTooltip": "Cât numerar este fizic în sertar la sfârșitul acestei zile: încasările în numerar plus fondul de rest, minus cheltuielile, avansurile și primele luate din casă și minus tot ce au dus colectările. Plățile cu cardul și din sold nu intră aici — acei bani nu sunt în casă. Același număr vine pe rândul «Numerar la punct» din rezumat.",
     "abonementSalesTitle": "Abonamente",

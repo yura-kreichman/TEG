@@ -1107,9 +1107,53 @@ export async function GET(request: Request) {
         { type: { in: ["collection_pool_sweep_abonement", "collection_pool_sweep_goods"] }, pointId },
       ],
     },
-    select: { amount: true },
+    select: { type: true, amount: true },
   });
   const collections = round2(collectionOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0));
+  // ОТКУДА ВЗЯЛАСЬ ИНКАССАЦИЯ (требование владельца 2026-09-04: «чтобы было
+  // понятно, откуда взялась Инкассация 16 850»). У Игроленда 3 сентября
+  // наличная выручка 16 250, а забрали 16 850.
+  //
+  // Показываем ПРИХОД ДНЯ, а не «из чего состояли забранные деньги». Первая
+  // версия делила инкассацию по природе денег (сколько в ней было размена,
+  // сколько касс пулов) и разваливалась на 2 сентября: размена там уехало
+  // 1400, но это же весь вчерашний остаток — строки «Остаток с прошлого дня
+  // 1400» и «Размен 1400» задваивали одни и те же деньги, и 10 000 + 1400 +
+  // 1400 не давало 11 400. Приход дня не пересекается ни с чем по построению:
+  //
+  //   03.09:  0 (вчера) + 16 250 выручка + 450 размен + 150 товары
+  //           − 16 850 инкассация = 0 в кассе ✓
+  //   02.09:  1400 (вчера) + 10 000 выручка − 11 400 инкассация = 0 ✓
+  //
+  // Типы — ровно те, что приносят наличные в ящик и не входят в строку
+  // «Наличные» выше (та считает только выручку зон).
+  const inflowOps = await prisma.moneyOperation.findMany({
+    where: {
+      occurredAt: { gte: dayStart, lt: dayEnd },
+      OR: [
+        { type: "change_fund", zone: { pointId } },
+        { type: { in: ["goods_revenue", "goods_change_fund", "abonement_topup"] }, pointId },
+      ],
+    },
+    select: { type: true, amount: true },
+  });
+  const sumOfTypes = (types: string[]) =>
+    round2(inflowOps.filter((op) => types.includes(op.type)).reduce((sum, op) => sum + Number(op.amount), 0));
+  const dayInflows = {
+    // Зонный размен и размен кассы Товаров — одна строка: для владельца это
+    // одни и те же «мои деньги на сдачу», разносить их по двум строкам
+    // значит просить его складывать в уме.
+    changeFund: sumOfTypes(["change_fund", "goods_change_fund"]),
+    // Нетто: возврат/отмена продажи пишется тем же типом с минусом, и без
+    // сложения со знаком отменённая продажа осталась бы в приходе.
+    goods: sumOfTypes(["goods_revenue"]),
+    abonement: sumOfTypes(["abonement_topup"]),
+  };
+
+  // Остаток ящика на начало дня. Без него 2 сентября задаёт тот же вопрос
+  // заново: выручка 10 000, а инкассация 11 400 — лишние 1 400 пришли со
+  // вчера, и из плашки это иначе не узнать.
+  const cashAtDayStart = await getPointCashBalance(pointId, prisma, dayStart);
 
   return NextResponse.json({
     cards,
@@ -1121,6 +1165,8 @@ export async function GET(request: Request) {
     expenses,
     payouts,
     collections,
+    dayInflows,
+    cashAtDayStart: round2(cashAtDayStart),
     cashOnHand: round2(cashOnHand),
     changeFundInTill: round2(changeFundInTill),
   });

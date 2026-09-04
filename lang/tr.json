@@ -1115,6 +1115,8 @@
     "changeFundInTillLabel": "Kasadaki bozuk para",
     "pointCashWithAbonementLabel": "Nokta kasası aboneliklerle:",
     "cashInTillLabel": "Kasadaki nakit:",
+    "cashAtDayStartLabel": "Önceki günden kalan",
+    "changeFundAddedLabel": "Bozuk para eklendi",
     "actualRevenueLabel": "Fiili ciro:",
     "cashInTillTooltip": "Bu günün sonunda çekmecede fiilen ne kadar nakit var: nakit ciro artı bozuk para fonu, eksi kasadan alınan giderler, avanslar ve primler, eksi tahsilatların götürdüğü her şey. Kart ve bakiye ödemeleri buraya girmez — o para kasada değildir. Aynı sayı özette «Noktadaki nakit bakiye» satırıyla gelir.",
     "abonementSalesTitle": "Abonelikler",

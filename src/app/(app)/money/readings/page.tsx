@@ -421,9 +421,13 @@ export default function ReadingsCalendarPage() {
   // больше нет: она расходилась с Telegram ровно на размен прошлых дней.
   const [changeFundInTill, setChangeFundInTill] = useState(0);
   const [cashOnHand, setCashOnHand] = useState(0);
-  // Сумма всех инкассаций дня — объясняет разрыв между наличной выручкой и
-  // остатком ящика (см. строку «Инкассация» в карточке итогов).
+  // Сумма всех инкассаций дня и её состав — объясняют разрыв между наличной
+  // выручкой и остатком ящика (см. строку «Инкассация» в карточке итогов).
   const [collections, setCollections] = useState(0);
+  const [dayInflows, setDayInflows] = useState({ changeFund: 0, goods: 0, abonement: 0 });
+  // Остаток ящика на начало дня — второе слагаемое инкассации в дни, когда
+  // забирают вместе со вчерашним хвостом.
+  const [cashAtDayStart, setCashAtDayStart] = useState(0);
   // Премии/авансы, взятые сотрудником из кассы точки за день — тот же состав,
   // что в сводке "Касса за день" (решение владельца 2026-08-16: Итоги дня
   // показывали грязную кассу и расходились со сводкой).
@@ -561,6 +565,8 @@ export default function ReadingsCalendarPage() {
     setChangeFundInTill(data.changeFundInTill ?? 0);
     setCashOnHand(data.cashOnHand ?? 0);
     setCollections(data.collections ?? 0);
+    setDayInflows(data.dayInflows ?? { changeFund: 0, goods: 0, abonement: 0 });
+    setCashAtDayStart(data.cashAtDayStart ?? 0);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -1214,17 +1220,13 @@ export default function ReadingsCalendarPage() {
                         именно тогда, когда свести кассу проще всего.
                         На «Разницу» не влияет ни то, ни другое.
 
-                        Размен — тоже ВСЕГДА, включая ноль (решение владельца
-                        2026-09-04). Прежнее «нулевая строка ничего не
-                        сообщает» здесь неверно: ноль сообщает ровно то, из-за
-                        чего и завели разговор. 3 сентября владелец внёс
-                        разменом 450 утром, вечерняя инкассация забрала их
-                        вместе с выручкой (16 700 = 16 250 + 450) — и строка
-                        исчезла, как будто размена в тот день не было вовсе.
-                        Это та же болезнь, что была у «Инкассации» выше:
-                        строка пряталась ровно в том случае, ради которого
-                        она и нужна. Пара «Размен в кассе / Наличных в кассе»
-                        теперь постоянная и предсказуемая. */}
+                        Размен — только когда он есть (решение владельца
+                        2026-09-04, вторая итерация того же дня: сперва
+                        показали и ноль, потом «нет смысла отображать размен
+                        если он 0»). Вопрос «куда делся мой размен» закрыт не
+                        нулевой строкой, а разбором инкассации ниже: 3 сентября
+                        размен 450 уехал внутри инкассации 16 850, и теперь это
+                        написано там, где деньги ушли. */}
                     {/* Все инкассации дня — зонные плюс свипы касс Абонементов
                         и Товаров (вопрос владельца 2026-09-04 по Игроленду:
                         «наличные 16 250, а в кассе 0 — почему?»). Раньше эта
@@ -1248,6 +1250,55 @@ export default function ReadingsCalendarPage() {
                         строке «Наличные» (там только выручка зон). Строка
                         отвечает на вопрос «куда делись деньги», а не служит
                         полным кассовым отчётом. */}
+                    {/* Остаток ящика на начало дня — над инкассацией, потому
+                        что это её слагаемое: 2 сентября выручка 10 000, а
+                        забрали 11 400, и лишние 1 400 пришли со вчера. Без
+                        строки плашка задавала бы тот же вопрос заново. */}
+                    {cashAtDayStart !== 0 && (
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <Wallet className="size-3.5 shrink-0" />
+                          {t.readings.cashAtDayStartLabel}
+                        </span>
+                        <span className="text-foreground">
+                          <Money value={cashAtDayStart} />
+                        </span>
+                      </div>
+                    )}
+                    {/* Остальной приход дня — то, что принесло наличные в ящик
+                        помимо выручки зон (она в строке «Наличные» выше).
+                        Вместе с остатком с прошлого дня и инкассацией это
+                        замыкается на «Наличных в кассе»:
+
+                          03.09  0 + 16 250 + 450 размен + 150 товары
+                                 − 16 850 = 0 ✓
+                          02.09  1400 + 10 000 − 11 400 = 0 ✓
+
+                        Со знаком «+», чтобы читалось как приход, и только
+                        ненулевые: в обычный день этих строк нет вовсе.
+                        Подписи Товаров и Абонементов — существующие ключи. */}
+                    {(
+                      [
+                        [t.readings.changeFundAddedLabel, dayInflows.changeFund],
+                        [t.readings.goodsReconciliationsTitle, dayInflows.goods],
+                        [t.readings.abonementSalesTitle, dayInflows.abonement],
+                      ] as const
+                    )
+                      .filter(([, value]) => value > 0)
+                      .map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Coins className="size-3.5 shrink-0" />
+                            {label}
+                          </span>
+                          <span className="text-foreground">
+                            +<Money value={value} />
+                          </span>
+                        </div>
+                      ))}
                     {collections > 0 && (
                       <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
@@ -1259,16 +1310,21 @@ export default function ReadingsCalendarPage() {
                         </span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
-                      <span className="flex items-center gap-1.5">
-                        <Coins className="size-3.5 shrink-0" />
-                        {t.readings.changeFundInTillLabel}
-                      </span>
-                      <span className="text-foreground"><Money value={changeFundInTill} /></span>
-                    </div>
-                    {/* Разделитель постоянный: строка размена больше не
-                        исчезает, и выбирать между двумя рамками не из чего. */}
-                    <div className="flex items-center justify-between border-t border-border pt-1.5">
+                    {changeFundInTill > 0 && (
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <Coins className="size-3.5 shrink-0" />
+                          {t.readings.changeFundInTillLabel}
+                        </span>
+                        <span className="text-foreground"><Money value={changeFundInTill} /></span>
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "flex items-center justify-between pt-1.5",
+                        changeFundInTill > 0 ? "border-t border-border" : "border-t border-primary/20"
+                      )}
+                    >
                       <span className="flex items-center gap-1.5 text-caption-airbnb">
                         {t.readings.cashInTillLabel}
                         <InfoTooltip text={t.readings.cashInTillTooltip} />

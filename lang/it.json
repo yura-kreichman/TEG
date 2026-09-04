@@ -1115,6 +1115,8 @@
     "changeFundInTillLabel": "Fondo cassa presente",
     "pointCashWithAbonementLabel": "Cassa del punto con abbonamenti:",
     "cashInTillLabel": "Contanti in cassa:",
+    "cashAtDayStartLabel": "Saldo del giorno precedente",
+    "changeFundAddedLabel": "Fondo cassa versato",
     "actualRevenueLabel": "Incasso effettivo:",
     "cashInTillTooltip": "Quanti contanti ci sono fisicamente nel cassetto a fine giornata: incasso in contanti più il fondo cassa, meno spese, anticipi e premi presi dalla cassa, e meno tutto ciò che i prelievi hanno portato via. I pagamenti con carta e con saldo non rientrano: quei soldi non sono in cassa. Lo stesso numero arriva nella riga «Contanti in cassa nel punto» del riepilogo.",
     "abonementSalesTitle": "Abbonamenti",

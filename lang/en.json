@@ -1115,6 +1115,8 @@
     "changeFundInTillLabel": "Change fund in till",
     "pointCashWithAbonementLabel": "Point cash incl. subscriptions:",
     "cashInTillLabel": "Cash in till:",
+    "cashAtDayStartLabel": "Carried over from yesterday",
+    "changeFundAddedLabel": "Change fund added",
     "actualRevenueLabel": "Actual revenue:",
     "cashInTillTooltip": "How much cash is physically in the drawer at the end of this day: cash revenue plus the change fund, minus expenses, advances and bonuses taken from the till, and minus everything the collections took away. Card and balance payments are not included — that money is not in the drawer. The same figure arrives as the «Cash on hand at the point» line in the summary.",
     "abonementSalesTitle": "Subscriptions",
