@@ -1061,7 +1061,7 @@ export default function ReadingsCalendarPage() {
                     </div>
                     <div>
                       <p className="text-card-title">{t.readings.daySummaryTitle}</p>
-                      <p className="text-caption-airbnb text-primary-foreground/70">{t.readings.daySummaryHint}</p>
+                      <p className="text-caption-airbnb text-primary-foreground/70!">{t.readings.daySummaryHint}</p>
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 border-t border-primary-foreground/20 pt-2 tabular-nums">
@@ -1108,15 +1108,15 @@ export default function ReadingsCalendarPage() {
                         Тем же решением, что и у размена в кассе, — плашка не
                         должна нести строки, которые ничего не сообщают. */}
                     {cards.some(returnsApplicable) && daySummary.returnsCount > 0 && (
-                      <div className="text-primary-foreground/60 flex items-center justify-between text-caption-airbnb">
+                      <div className="text-primary-foreground/60! flex items-center justify-between text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
                           <RefreshCcw className="size-3.5 shrink-0" />
                           {t.operatorApp.submit.returnsLabelShort}
                         </span>
-                        <span className="">{daySummary.returnsCount}</span>
+                        <span>{daySummary.returnsCount}</span>
                       </div>
                     )}
-                    <div className="text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/25 pt-1.5 text-caption-airbnb">
+                    <div className="text-primary-foreground/60! flex items-center justify-between border-t border-primary-foreground/25 pt-1.5 text-caption-airbnb">
                       {/* Оплаченное с баланса вычтено (решение владельца
                           2026-08-16: «расчётная выручка тоже не должна
                           учитывать оплату по балансу, нет смысла») — экран
@@ -1125,7 +1125,7 @@ export default function ReadingsCalendarPage() {
                           ниже, без промежуточных строк. В самих счётчиках
                           валовая выручка не меняется — это только отображение
                           денежной части (docs/spec/01-counters.md). */}
-                      <span className="text-primary-foreground/75">{t.operatorApp.submit.calculatedRevenue}</span>
+                      <span>{t.operatorApp.submit.calculatedRevenue}</span>
                       <span>
                         <Money value={Math.round((daySummary.calculatedRevenue - daySummary.abonementInCash) * 100) / 100} />
                       </span>
@@ -1297,12 +1297,12 @@ export default function ReadingsCalendarPage() {
                         забрали 11 400, и лишние 1 400 пришли со вчера. Без
                         строки плашка задавала бы тот же вопрос заново. */}
                     {cashAtDayStart !== 0 && (
-                      <div className="text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
+                      <div className="text-primary-foreground/60! flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
                           <Wallet className="size-3.5 shrink-0" />
                           {t.readings.cashAtDayStartLabel}
                         </span>
-                        <span className="">
+                        <span>
                           <Money value={cashAtDayStart} />
                         </span>
                       </div>
@@ -1330,7 +1330,7 @@ export default function ReadingsCalendarPage() {
                       .map(([label, value]) => (
                         <div
                           key={label}
-                          className="flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb text-primary-foreground/60"
+                          className="flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb text-primary-foreground/60!"
                         >
                           <span className="flex items-center gap-1.5">
                             <Coins className="size-3.5 shrink-0" />
@@ -1353,12 +1353,12 @@ export default function ReadingsCalendarPage() {
                       </div>
                     )}
                     {changeFundInTill > 0 && (
-                      <div className="text-primary-foreground/60 flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
+                      <div className="text-primary-foreground/60! flex items-center justify-between border-t border-primary-foreground/20 pt-1.5 text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
                           <Coins className="size-3.5 shrink-0" />
                           {t.readings.changeFundInTillLabel}
                         </span>
-                        <span className=""><Money value={changeFundInTill} /></span>
+                        <span><Money value={changeFundInTill} /></span>
                       </div>
                     )}
                     {/* Итоговая строка — на светлой подложке внутри акцентной
@@ -1371,7 +1371,7 @@ export default function ReadingsCalendarPage() {
                         поля вокруг (-mx-*) выводят её на всю ширину карточки,
                         под её внутренний отступ. */}
                     <div className="-mx-4.5 -mb-4.5 mt-1.5 flex items-center justify-between rounded-b-block bg-primary-foreground/12 px-4.5 py-3.5">
-                      <span className="flex items-center gap-1.5 text-caption-airbnb text-primary-foreground/80">
+                      <span className="flex items-center gap-1.5 text-caption-airbnb text-primary-foreground/80!">
                         {t.readings.cashInTillLabel}
                         <InfoTooltip className="text-primary-foreground/70 hover:text-primary-foreground" text={t.readings.cashInTillTooltip} />
                       </span>
