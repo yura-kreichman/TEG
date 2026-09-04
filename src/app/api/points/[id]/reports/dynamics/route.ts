@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
+import { payoutIsBusinessMoney } from "@/lib/zone-balance";
 import {
   getPreviousCustomRange,
   getPreviousPeriodRange,
@@ -92,7 +93,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       occurredAt: { gte: start, lt: end },
       ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
     },
-    select: { type: true, amount: true, occurredAt: true },
+    select: { type: true, amount: true, occurredAt: true, performedByOperatorId: true },
   });
   let expenses = 0;
   let payouts = 0;
@@ -110,9 +111,15 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const deductionsByDay = new Map<string, number>();
   for (const op of moneyOps) {
     const amount = Math.abs(Number(op.amount));
+    // Выплата, внесённая владельцем из кармана, деньгами бизнеса не считается
+    // (правило владельца 2026-09-04) — разбор у payoutIsBusinessMoney. Тот же
+    // фильтр и для графика: иначе линия Прибыли просела бы там, где сама
+    // Прибыль этих денег уже не вычитает.
+    const isPayout =
+      (op.type === "advance" || op.type === "bonus_payout") && payoutIsBusinessMoney(op);
     if (op.type === "expense") expenses += amount;
-    if (op.type === "advance" || op.type === "bonus_payout") payouts += amount;
-    if (op.type === "expense" || op.type === "advance" || op.type === "bonus_payout") {
+    if (isPayout) payouts += amount;
+    if (op.type === "expense" || isPayout) {
       const key = dateKey(op.occurredAt);
       deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
       activeDays.add(key);

@@ -18,6 +18,7 @@ import {
   getPointCashBalance,
   getPointGoodsCashTotal,
   getZonePoolAllocation,
+  payoutIsBusinessMoney,
 } from "@/lib/zone-balance";
 import { getTenantModuleFlags } from "@/lib/tenant-modules";
 
@@ -166,7 +167,11 @@ export async function GET(request: Request) {
     // физически покинувшие кассу, значит настоящий расход бизнеса — теперь
     // вычитаются и здесь, отдельной строкой "Зарплаты" рядом с Расходами
     // (не слиты в expense, чтобы не терять разбивку "закупки" vs "ФОТ").
-    if (op.type === "advance" || op.type === "bonus_payout") totalPayouts += amount;
+    // Выплата, внесённая владельцем из кармана, в «Зарплаты» и в Прибыль не
+    // входит (правило владельца 2026-09-04) — разбор у payoutIsBusinessMoney.
+    if ((op.type === "advance" || op.type === "bonus_payout") && payoutIsBusinessMoney(op)) {
+      totalPayouts += amount;
+    }
   }
 
   // Разница (недостача/излишек) бизнес-карточки — сумма "факт минус расчёт

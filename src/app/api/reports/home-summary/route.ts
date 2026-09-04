@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
+import { payoutIsBusinessMoney } from "@/lib/zone-balance";
 import { calcSessions, calcZoneRevenue, calcZoneRevenueExactVoids, isCountersTapAssistZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getCountersBalanceBySubmission } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
@@ -338,7 +339,11 @@ async function computeWindowSummary(
     if (op.type === "abonement_topup") cash += amount;
     if (op.type === "abonement_topup_cashless") mobile += amount;
     if (op.type === "expense") expense += amount; // stored negative
-    if (op.type === "advance" || op.type === "bonus_payout") payouts += amount; // stored negative
+    // Выплата, внесённая владельцем из кармана, деньгами бизнеса не считается
+    // (правило владельца 2026-09-04) — разбор у payoutIsBusinessMoney.
+    if ((op.type === "advance" || op.type === "bonus_payout") && payoutIsBusinessMoney(op)) {
+      payouts += amount; // stored negative
+    }
   }
 
   return {
