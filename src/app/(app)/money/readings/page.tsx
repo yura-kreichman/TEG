@@ -421,6 +421,9 @@ export default function ReadingsCalendarPage() {
   // больше нет: она расходилась с Telegram ровно на размен прошлых дней.
   const [changeFundInTill, setChangeFundInTill] = useState(0);
   const [cashOnHand, setCashOnHand] = useState(0);
+  // Сумма всех инкассаций дня — объясняет разрыв между наличной выручкой и
+  // остатком ящика (см. строку «Инкассация» в карточке итогов).
+  const [collections, setCollections] = useState(0);
   // Премии/авансы, взятые сотрудником из кассы точки за день — тот же состав,
   // что в сводке "Касса за день" (решение владельца 2026-08-16: Итоги дня
   // показывали грязную кассу и расходились со сводкой).
@@ -557,6 +560,7 @@ export default function ReadingsCalendarPage() {
     setPayouts(data.payouts ?? 0);
     setChangeFundInTill(data.changeFundInTill ?? 0);
     setCashOnHand(data.cashOnHand ?? 0);
+    setCollections(data.collections ?? 0);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -1126,22 +1130,12 @@ export default function ReadingsCalendarPage() {
                         <Money value={revenueTotal} size="display" />
                       </span>
                     </div>
-                    {/* Сколько из этой суммы владелец забрал сам, не дожидаясь
-                        пересчёта. Названо строкой, а не спрятано в итог: иначе
-                        владелец видит число больше сданного сотрудником и не
-                        понимает, откуда оно. Тот же значок, что у уведомления об
-                        инкассации и у строки в сводке зоны. */}
-                    {daySummary.collected > 0 && (
-                      <div className="flex items-center justify-between text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
-                          <Landmark className="size-3.5 shrink-0" />
-                          {t.summaryText.collectionLabel}
-                        </span>
-                        <span className="font-bold text-foreground">
-                          <Money value={daySummary.collected} />
-                        </span>
-                      </div>
-                    )}
+                    {/* Строка «Инкассация» стояла здесь и показывала только
+                        забранное ДО пересчёта (daySummary.collected). Уехала
+                        вниз, к «Наличных в кассе», и считает теперь ВСЕ
+                        инкассации дня — см. комментарий там. Само слагаемое
+                        никуда не делось: оно по-прежнему внутри revenueTotal
+                        выше, изменилось только место и охват строки. */}
                     {/* Расходы дня — сразу под Фактической кассой (решение
                         владельца 2026-08-16): деньги вынули из неё же, и
                         читать это надо рядом, а не через Разницу. В саму
@@ -1220,6 +1214,40 @@ export default function ReadingsCalendarPage() {
                         именно тогда, когда свести кассу проще всего.
                         Размен — только когда он есть: нулевая строка ничего
                         не сообщает. На «Разницу» не влияет ни то, ни другое. */}
+                    {/* Все инкассации дня — зонные плюс свипы касс Абонементов
+                        и Товаров (вопрос владельца 2026-09-04 по Игроленду:
+                        «наличные 16 250, а в кассе 0 — почему?»). Раньше эта
+                        строка стояла выше и показывала только забранное ДО
+                        пересчёта сотрудником; в самом обычном случае —
+                        владелец забирает кассу через минуту ПОСЛЕ сдачи —
+                        она не показывалась вовсе, и деньги на экране
+                        исчезали без следа между «Наличные» и «Наличных в
+                        кассе». Место — вплотную к остатку ящика: инкассация
+                        уменьшает именно его, а не выручку.
+
+                        Со знаком «−», как у премий и авансов выше: это то,
+                        что из кассы ушло. На «Разницу» не влияет — она
+                        сверяет счётчики со сданной кассой, а инкассация
+                        случается уже после сверки.
+
+                        Внимание: «Наличные − Инкассация» не обязано давать
+                        «Наличных в кассе». Остаток ящика — накопленный итог
+                        с начала работы точки, в нём есть и вчерашний хвост, и
+                        размен, и наличные Товаров/Абонементов, которых нет в
+                        строке «Наличные» (там только выручка зон). Строка
+                        отвечает на вопрос «куда делись деньги», а не служит
+                        полным кассовым отчётом. */}
+                    {collections > 0 && (
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <Landmark className="size-3.5 shrink-0" />
+                          {t.summaryText.collectionLabel}
+                        </span>
+                        <span className="font-bold text-foreground">
+                          −<Money value={collections} />
+                        </span>
+                      </div>
+                    )}
                     {changeFundInTill > 0 && (
                       <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
                         <span className="flex items-center gap-1.5">

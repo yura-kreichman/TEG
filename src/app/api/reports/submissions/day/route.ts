@@ -1082,6 +1082,35 @@ export async function GET(request: Request) {
     getPointChangeFundInTill(pointId, prisma, dayEnd),
   ]);
 
+  // ВСЕ инкассации этого дня, а не только сделанные до пересчёта сотрудником
+  // (вопрос владельца 2026-09-04 по Игроленду: «наличные 16 250, а в кассе 0 —
+  // почему?»). Раньше строка «Инкассация» показывала только досдаточную часть
+  // (ZoneSubmission.collectedBeforeSubmission), и в самом обычном случае —
+  // владелец забрал кассу СРАЗУ ПОСЛЕ сдачи — экран не показывал вообще
+  // ничего: сверху 16 250 наличными, снизу ноль в кассе, а куда делись деньги,
+  // из страницы было не узнать.
+  //
+  // Типы — ровно те, что уменьшают физическую кассу: зонная инкассация и два
+  // свипа пулов (абонементы/товары забирают отдельными записями,
+  // lib/zone-balance.ts). collection_advance сюда НЕ входит намеренно: он
+  // стоит в CASH_EXCLUDED_TYPES и кассы точки не уменьшает — показать его в
+  // одном ряду с остальными значило бы обещать вычитание, которого нет.
+  //
+  // Зонные операции ищем через zone.pointId, точечные — по pointId: у зонной
+  // операции pointId пуст всегда (CHECK MoneyOperation_zone_xor_point_check),
+  // одним условием их не выбрать.
+  const collectionOps = await prisma.moneyOperation.findMany({
+    where: {
+      occurredAt: { gte: dayStart, lt: dayEnd },
+      OR: [
+        { type: "collection", zone: { pointId } },
+        { type: { in: ["collection_pool_sweep_abonement", "collection_pool_sweep_goods"] }, pointId },
+      ],
+    },
+    select: { amount: true },
+  });
+  const collections = round2(collectionOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0));
+
   return NextResponse.json({
     cards,
     abonementSales,
@@ -1091,6 +1120,7 @@ export async function GET(request: Request) {
     goodsSalesTotals,
     expenses,
     payouts,
+    collections,
     cashOnHand: round2(cashOnHand),
     changeFundInTill: round2(changeFundInTill),
   });
