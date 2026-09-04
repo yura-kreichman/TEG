@@ -590,9 +590,35 @@ export default function ZoneBalancesPage() {
     items: CollectionEntry[];
     total: number;
   };
+  // Строки одного акта — по исполнителю, точке и БЛИЗОСТИ ВО ВРЕМЕНИ, а не по
+  // точному совпадению метки.
+  //
+  // actKey с сервера склеен из полного ISO времени, и в его комментарии
+  // написано, что все строки одной инкассации совпадают до миллисекунды,
+  // потому что occurredAt берётся из CURRENT_TIMESTAMP — времени начала
+  // транзакции. На проде это неправда: метку ставит Prisma для каждой строки
+  // отдельно. Общая инкассация КидсБурга 4 сентября (замечание владельца по
+  // скриншоту «ты не сгруппировал инкассацию, сделанную в одно время»):
+  //
+  //   15:36:24.390  Машинки    475
+  //   15:36:24.412  Батуты     105
+  //   15:36:24.415  Виртуалка   75
+  //
+  // Три ключа вместо одного — склейка не срабатывала НИ РАЗУ, и общая
+  // инкассация всегда рассыпалась по зонам. То же самое 3 сентября в 14:14.
+  //
+  // Окно в 2 секунды: строки акта пишутся подряд в одной транзакции (тут
+  // разброс 25 мс), а два РАЗНЫХ захода владельца отделяют открытие шторки,
+  // ввод суммы и подтверждение — уложиться в две секунды нельзя. Отдельные
+  // нажатия по зонам поэтому остаются отдельными строками, как и просил
+  // владелец. Якорь окна — первая строка группы, а не предыдущая, иначе
+  // цепочка близких строк склеивалась бы неограниченно долго.
+  const ACT_WINDOW_MS = 2000;
   function splitIntoActs(items: CollectionEntry[]): CollectionAct[] {
     const acts: CollectionAct[] = [];
-    const byKey = new Map<string, CollectionAct>();
+    // Ключ — исполнитель и точка (всё, что в actKey после времени);
+    // значение — открытая группа и время её якоря.
+    const open = new Map<string, { act: CollectionAct; anchorMs: number }>();
     for (const item of items) {
       // Размен — всегда собственная строка, ни с чем не склеивается.
       if (item.pool === "change_fund") {
@@ -604,14 +630,16 @@ export default function ZoneBalancesPage() {
         acts.push({ key: item.id, kind: "collection", items: [item], total: item.amount });
         continue;
       }
-      const existing = byKey.get(item.actKey);
-      if (existing) {
-        existing.items.push(item);
-        existing.total = Math.round((existing.total + item.amount) * 100) / 100;
+      const identity = item.actKey.split("|").slice(1).join("|");
+      const itemMs = new Date(item.occurredAt).getTime();
+      const existing = open.get(identity);
+      if (existing && Math.abs(existing.anchorMs - itemMs) <= ACT_WINDOW_MS) {
+        existing.act.items.push(item);
+        existing.act.total = Math.round((existing.act.total + item.amount) * 100) / 100;
         continue;
       }
       const act: CollectionAct = { key: item.actKey, kind: "collection", items: [item], total: item.amount };
-      byKey.set(item.actKey, act);
+      open.set(identity, { act, anchorMs: itemMs });
       acts.push(act);
     }
 
