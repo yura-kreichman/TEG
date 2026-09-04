@@ -707,12 +707,22 @@ export async function computeZoneSubmissionRevenues(
       zs.compensatedExpenses !== null
         ? Number(zs.compensatedExpenses)
         : (expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
+    // collectedBefore здесь БОЛЬШЕ НЕ ПРИБАВЛЯЕТСЯ: он уже внутри actualTotal
+    // (см. его определение выше). Слагаемое осталось от прежней формулы, где
+    // actualTotal был «сколько сотрудник донёс до пересчёта», и 2026-09-03,
+    // когда actualTotal переопределили как выручку зоны за сдачу, его забыли
+    // убрать — забранное владельцем среди дня стало считаться дважды.
+    //
+    // Цена ошибки (замечание владельца 2026-09-05): у Жени в КидсБурге
+    // «Разница» за сентябрь показывала +5745 при настоящих +395 — ровно на
+    // 5350, которые владелец забрал днём 2 сентября (2000 + 350 + 3000 по
+    // трём зонам). Экран «Итоги дня» при этом показывал верный ноль: там своя
+    // копия формулы, и она складывает collectedBefore с СЫРОЙ кассой, а не с
+    // actualTotal, — потому расхождение и выглядело избирательным.
     const difference =
       zone.accountingMode === "cash_only"
         ? 0
-        : Math.round(
-            (actualTotal + expensesInSubmission + collectedBefore + abonementAmount - calculatedRevenue) * 100
-          ) / 100;
+        : Math.round((actualTotal + expensesInSubmission + abonementAmount - calculatedRevenue) * 100) / 100;
 
     return {
       zoneSubmissionId: zs.id,
