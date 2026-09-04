@@ -1068,11 +1068,16 @@ export default function ReadingsCalendarPage() {
                         <span className="text-foreground"><Money value={daySummary.abonement} /></span>
                       </div>
                     )}
-                    {/* Применимость — по режиму учёта, как у карточки
-                        отдельной зоны ниже, а НЕ по тому, нулевое ли число —
-                        0 возвратов за день тоже валидный результат и должен
-                        быть виден (запрос пользователя 2026-07-19). */}
-                    {cards.some(returnsApplicable) && (
+                    {/* Применимость — по режиму учёта (у зоны «Только касса»
+                        возвратов не бывает вовсе), И только когда возвраты
+                        реально были.
+                        Нулевую строку показывали с 2026-07-19 по просьбе
+                        владельца («0 возвратов за день тоже валидный
+                        результат»); 2026-09-04 он это отменил: «нет
+                        надобности отображать, если нет возвратов и тестов».
+                        Тем же решением, что и у размена в кассе, — плашка не
+                        должна нести строки, которые ничего не сообщают. */}
+                    {cards.some(returnsApplicable) && daySummary.returnsCount > 0 && (
                       <div className="flex items-center justify-between text-caption-airbnb">
                         <span className="flex items-center gap-1.5">
                           <RefreshCcw className="size-3.5 shrink-0" />
