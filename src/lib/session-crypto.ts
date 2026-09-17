@@ -36,6 +36,11 @@ export function signExpiringToken(id: string, expiresAtMs: number): string {
 }
 
 export function verifyExpiringToken(token: string): string | null {
+  return readExpiringToken(token)?.id ?? null;
+}
+
+/** То же, что verifyExpiringToken, но отдаёт и срок — нужен продлению кук устройств (lib/device-cookies.ts). */
+export function readExpiringToken(token: string): { id: string; expiresAtMs: number } | null {
   const [id, expiresAtStr, signature] = token.split(".");
   if (!id || !expiresAtStr || !signature) return null;
 
@@ -47,7 +52,7 @@ export function verifyExpiringToken(token: string): string | null {
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
-  return id;
+  return { id, expiresAtMs };
 }
 
 // Формат cookie "session" и "admin_session" (аудит 2026-08-13): к id и сроку

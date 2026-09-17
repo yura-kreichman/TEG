@@ -9,6 +9,7 @@ import {
   verifySessionDetails,
   type SessionTokenDetails,
 } from "@/lib/session-crypto";
+import { DEVICE_COOKIE_MAX_AGE, OWNER_DEVICE_COOKIE } from "@/lib/device-cookies";
 
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -29,8 +30,7 @@ const ADMIN_SESSION_MAX_AGE = 60 * 60 * 2; // 2 hours
 // Admin) this browser last logged into, so a personal PIN can be entered without
 // retyping the email. Not to be confused with PointDevice/operator sessions below —
 // this is a personal-device convenience for account holders, not the operator kiosk flow.
-const OWNER_DEVICE_COOKIE = "owner_device";
-// Практически бессрочно (решение владельца 2026-08-16). От этой привязки
+// Бессрочно (решение владельца 2026-08-16, уточнено 2026-09-17). От этой привязки
 // зависит не только подстановка почты, но и кнопка «Войти как Владелец» на
 // экране входа сотрудника — единственный переход в кабинет с телефона, где
 // человек работает и владельцем, и сотрудником. Истечение через год молча
@@ -38,7 +38,9 @@ const OWNER_DEVICE_COOKIE = "owner_device";
 // как пропажа кабинета. Риска в долгом сроке нет: cookie лишь показывает
 // форму входа, а сам вход по-прежнему требует пароль или личный PIN; на
 // планшетах точки её не бывает вовсе, и кнопка там не появляется.
-const OWNER_DEVICE_MAX_AGE = 60 * 60 * 24 * 365 * 10; // 10 лет
+// Прежние «10 лет» были иллюзией — браузер держит куку не дольше 400 дней;
+// бессрочность даёт продление на каждом визите, см. lib/device-cookies.ts.
+const OWNER_DEVICE_MAX_AGE = DEVICE_COOKIE_MAX_AGE;
 
 // Отмечает, что текущая Owner-сессия (SESSION_COOKIE) была создана через
 // Impersonate из /admin (docs/spec/06-super-admin.md, п.4), а не обычным

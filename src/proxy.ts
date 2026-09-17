@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server
 import { buildCsp, NONCE_HEADER } from "@/lib/csp";
 import { getSubscriptionGateState } from "@/lib/subscription-gate";
 import { verifySessionToken } from "@/lib/session-crypto";
+import { renewDeviceCookies } from "@/lib/device-cookies";
 import { prisma } from "@/lib/prisma";
 import { resolveTenantBySlug } from "@/lib/landing/resolve-tenant";
 import { isBotUserAgent, recordLandingVisit, pruneOldVisitorHashes } from "@/lib/landing/stats";
@@ -127,6 +128,9 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const withCsp = (response: NextResponse) => {
     response.headers.set("Content-Security-Policy", csp);
     setRobotsTag(request, response);
+    // Бессрочная привязка устройств — см. lib/device-cookies.ts. Только
+    // читающие запросы: куки привязки выдают и удаляют POST-роуты.
+    if (request.method === "GET" || request.method === "HEAD") renewDeviceCookies(request, response);
     return response;
   };
 

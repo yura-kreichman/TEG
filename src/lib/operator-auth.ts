@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifySecret } from "@/lib/password-hash";
 import { prisma } from "@/lib/prisma";
 import { sessionCookieOptions, signExpiringToken, verifyExpiringToken } from "@/lib/session-crypto";
+import { DEVICE_COOKIE_MAX_AGE, POINT_DEVICE_COOKIE } from "@/lib/device-cookies";
 
 // Two distinct cookies for the operator (point-of-sale) flow, separate from the
 // Owner/Super Admin cookies in src/lib/auth.ts:
@@ -14,8 +15,10 @@ import { sessionCookieOptions, signExpiringToken, verifyExpiringToken } from "@/
 //   already-activated device. Shorter-lived, meant to be re-entered across work
 //   sessions/shift handovers ("пересменка"), and cleared explicitly when an
 //   operator is done so the next operator can enter their own PIN.
-const POINT_DEVICE_COOKIE = "point_device";
-const POINT_DEVICE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+//
+// Привязка устройства бессрочна: кука продлевается на каждом визите, см.
+// lib/device-cookies.ts (раньше жила ровно год с активации).
+const POINT_DEVICE_MAX_AGE = DEVICE_COOKIE_MAX_AGE;
 
 const OPERATOR_SESSION_COOKIE = "operator_session";
 const OPERATOR_SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours
