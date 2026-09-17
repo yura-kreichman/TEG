@@ -51,7 +51,10 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/operator/goo
     return NextResponse.json({ id: order.id, number: order.number, total });
   } catch (err) {
     if (err instanceof Error && err.message === "ORDER_NOT_FOUND") {
-      return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
+      // code — клиент отличает пропавший заказ от пропавшего товара (оба
+      // 404): заказ, оплаченный на другом устройстве, надо снять с корзины,
+      // см. syncHeldOrder в operator-cart-context.tsx.
+      return NextResponse.json({ error: "Заказ не найден", code: "ORDER_NOT_FOUND" }, { status: 404 });
     }
     if (err instanceof Error && err.message === "GOODS_NOT_FOUND") {
       return NextResponse.json({ error: "Товар не найден" }, { status: 404 });

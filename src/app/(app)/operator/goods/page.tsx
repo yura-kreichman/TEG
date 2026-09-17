@@ -165,12 +165,14 @@ export default function GoodsPage() {
   // 2026-07-30: "эти товары должны как бы подниматься снова в корзину, и
   // должна быть такая же механика с кнопкой Отложить обратно") — тап по
   // чипу заказа поднимает его позиции ОБРАТНО в обычную корзину (goodsCart),
-  // дальше докупка — тем же тапом по тайлам каталога, что и всегда, "Отложить"
-  // синхронизирует правки заново (см. syncHeldOrderCart в lib/goods.ts).
+  // дальше докупка — тем же тапом по тайлам каталога, что и всегда. Каждая
+  // правка сразу уходит на сервер (запрос пользователя 2026-09-17, см.
+  // syncHeldOrder в operator-cart-context.tsx — там же живёт и сама привязка,
+  // чтобы пережить уход в другой раздел).
   // Отдельного sheet "только посмотреть" с поиском/списком больше нет —
   // первая версия (поиск+список внутри sheet) была отклонена пользователем.
   const [heldOrders, setHeldOrders] = useState<HeldOrderCtx[]>([]);
-  const [editingHeldOrderId, setEditingHeldOrderId] = useState<string | null>(null);
+  const editingHeldOrderId = goodsCart.heldOrderId;
   // payingHeldOrderId — тот же payment-method sheet ниже (paymentOpen),
   // просто submitPayment смотрит на это поле и решает, куда слать оплату:
   // draft-корзину (sellCart) или конкретный отложенный заказ (payHeldOrder).
@@ -258,14 +260,33 @@ export default function GoodsPage() {
     fetch("/api/operator/goods/held-orders")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) setHeldOrders(data.orders ?? []);
+        if (!data) return;
+        const orders: HeldOrderCtx[] = data.orders ?? [];
+        setHeldOrders(orders);
+        // Поднятый заказ оплатили или удалили на другом устройстве точки,
+        // пока его позиции лежали в корзине здесь — снимаем их, иначе
+        // закрытие шторки продало бы те же товары новым заказом.
+        // getHeldOrderId, а не editingHeldOrderId: первый запрос уходит до
+        // того, как провайдер восстановит привязку из localStorage.
+        const boundOrderId = goodsCart.getHeldOrderId();
+        if (boundOrderId && !orders.some((o) => o.id === boundOrderId)) goodsCart.clearCart();
       })
       .catch(() => {});
   }
 
   useEffect(() => {
     loadHeldOrders();
+    // Правка заказа, не дошедшая до сервера (ошибка сети, уход с экрана
+    // посреди запроса), досылается при возвращении на экран.
+    void goodsCart.syncHeldOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Без массива зависимостей — переподписка на каждом рендере дешёвая и
+  // держит flashError со свежим t без отдельного ref.
+  useEffect(() =>
+    goodsCart.subscribeHeldOrderSyncErrors((message) => flashError(message ?? t.operatorApp.gameRoom.networkError))
+  );
   // Другой оператор/устройство на этой же точке мог отложить/оплатить/
   // отменить заказ — тот же приём, что у каталога выше (пункт может часами
   // оставаться открытым).
@@ -361,6 +382,14 @@ export default function GoodsPage() {
     setHolding(true);
     try {
       const isEditing = Boolean(editingHeldOrderId);
+      if (isEditing) {
+        // Сначала дожидаемся фоновой синхронизации — иначе её запрос и этот
+        // могли бы примениться в обратном порядке. Если заказ за это время
+        // исчез (оплачен на другом устройстве), корзина уже снята, а ошибка
+        // показана.
+        await goodsCart.syncHeldOrder();
+        if (goodsCart.getHeldOrderId() !== editingHeldOrderId) return;
+      }
       const url = isEditing
         ? `/api/operator/goods/held-orders/${editingHeldOrderId}/items`
         : "/api/operator/goods/held-orders";
@@ -375,7 +404,6 @@ export default function GoodsPage() {
         return;
       }
       goodsCart.clearCart();
-      setEditingHeldOrderId(null);
       setCartSheetOpen(false);
       loadHeldOrders();
       load();
@@ -399,16 +427,40 @@ export default function GoodsPage() {
   // остаётся на экране каталога, тайлы сразу тапабельны, счётчик на
   // плавающей кнопке корзины отражает поднятые позиции — тот же сигнал,
   // что и у обычного черновика.
-  function openHeldOrderForEdit(order: HeldOrderCtx) {
-    goodsCart.clearCart();
-    const qtyByGoods = new Map<string, number>();
-    for (const line of order.lines) {
-      qtyByGoods.set(line.goodsId, (qtyByGoods.get(line.goodsId) ?? 0) + line.quantity);
+  //
+  // Позиции берутся свежим запросом, а не из чипа (баг 2026-09-17): список
+  // чипов не обновляется после каждой фоновой синхронизации, и повторный
+  // подъём заказа из устаревшего списка показал бы его без докупленного — а
+  // следующий тап отправил бы это старое содержимое на сервер и стёр докупку
+  // уже там. По той же причине сначала дожидаемся, пока правка ПРЕДЫДУЩЕГО
+  // поднятого заказа дойдёт до сервера.
+  async function openHeldOrderForEdit(order: HeldOrderCtx) {
+    if (holdActionInFlight.current) return;
+    holdActionInFlight.current = true;
+    try {
+      await goodsCart.syncHeldOrder();
+      const res = await fetch("/api/operator/goods/held-orders");
+      const data = res.ok ? await res.json() : null;
+      if (!data) {
+        flashError(t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      const orders: HeldOrderCtx[] = data.orders ?? [];
+      setHeldOrders(orders);
+      // Заказа уже нет (оплачен/удалён на другом устройстве) — его чип
+      // исчезнет вместе с обновлённым списком, поднимать нечего.
+      const fresh = orders.find((o) => o.id === order.id);
+      if (!fresh) return;
+      const qtyByGoods: Record<string, number> = {};
+      for (const line of fresh.lines) {
+        qtyByGoods[line.goodsId] = (qtyByGoods[line.goodsId] ?? 0) + line.quantity;
+      }
+      goodsCart.openHeldOrder(fresh.id, qtyByGoods);
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      holdActionInFlight.current = false;
     }
-    for (const [goodsId, quantity] of qtyByGoods) {
-      goodsCart.setQuantity(goodsId, quantity);
-    }
-    setEditingHeldOrderId(order.id);
   }
 
   // "Оплатить" из корзины — если это правка уже открытого заказа, сначала
@@ -428,6 +480,9 @@ export default function GoodsPage() {
     holdActionInFlight.current = true;
     setHolding(true);
     try {
+      // См. commitCart — тот же порядок с фоновой синхронизацией.
+      await goodsCart.syncHeldOrder();
+      if (goodsCart.getHeldOrderId() !== editingHeldOrderId) return;
       const res = await fetch(`/api/operator/goods/held-orders/${editingHeldOrderId}/items`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -440,7 +495,6 @@ export default function GoodsPage() {
       }
       setPayingHeldOrderId(editingHeldOrderId);
       setPayingHeldOrderTotal(data.total);
-      setEditingHeldOrderId(null);
       goodsCart.clearCart();
       setCartSheetOpen(false);
       setPaymentOpen(true);
@@ -519,6 +573,9 @@ export default function GoodsPage() {
     if (holdActionInFlight.current) return;
     holdActionInFlight.current = true;
     try {
+      // Фоновая синхронизация, попавшая ПОСЛЕ удаления, получила бы «Заказ
+      // не найден» и показала бы оператору ошибку на ровном месте.
+      await goodsCart.syncHeldOrder();
       const res = await fetch(`/api/operator/goods/held-orders/${orderId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
@@ -530,7 +587,6 @@ export default function GoodsPage() {
       // "остаток вернулся", а не "запрос ушёл".
       playUndoTone();
       goodsCart.clearCart();
-      setEditingHeldOrderId(null);
       setCartSheetOpen(false);
       loadHeldOrders();
       load();

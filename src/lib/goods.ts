@@ -891,9 +891,23 @@ export async function syncHeldOrderCart(params: SyncHeldOrderParams) {
             update: { quantity: { decrement: delta } },
           });
         }
-        await tx.goodsHeldOrderLine.create({
-          data: { orderId, goodsId, quantity: delta, priceSnapshot: goods.price, stockTracked: goods.trackStock },
-        });
+        // Докупка дописывается в уже существующую строку того же товара, если
+        // цена и учёт остатка с тех пор не менялись (2026-09-17). Правка
+        // заказа теперь сохраняется на каждый тап, а каждая строка при оплате
+        // становится отдельной GoodsSale — без слияния четыре тапа по одному
+        // товару дали бы в отчётах и на чеке четыре продажи по штуке вместо
+        // одной на четыре. Строка с другой ценой или другим флагом учёта
+        // остаётся отдельной: иначе потерялся бы её снапшот.
+        const mergeInto = order.lines.find(
+          (l) => l.goodsId === goodsId && l.priceSnapshot.equals(goods.price) && l.stockTracked === goods.trackStock
+        );
+        if (mergeInto) {
+          await tx.goodsHeldOrderLine.update({ where: { id: mergeInto.id }, data: { quantity: { increment: delta } } });
+        } else {
+          await tx.goodsHeldOrderLine.create({
+            data: { orderId, goodsId, quantity: delta, priceSnapshot: goods.price, stockTracked: goods.trackStock },
+          });
+        }
       } else {
         let toRemove = -delta;
         // Сначала срезаем строки, считая по дороге, сколько штук РЕАЛЬНО было
