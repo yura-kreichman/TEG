@@ -81,16 +81,20 @@ export default function SetPinPage() {
 
         <div className="flex flex-col gap-1">
           <Label htmlFor="pin">{t.auth.newPinLabel}</Label>
+          {/* Не type="password" — см. поле ПИН на /login: иначе Chrome
+              предлагает сохранить ПИН как пароль аккаунта. */}
           <Input
             id="pin"
-            type="password"
+            type="text"
             inputMode="numeric"
             pattern="\d{4,6}"
             required
-            autoComplete="off"
+            autoComplete="one-time-code"
+            data-1p-ignore
+            data-lpignore="true"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            className="h-14 text-lg tabular-nums"
+            className="h-14 text-lg tabular-nums [-webkit-text-security:disc]"
           />
         </div>
 
@@ -98,14 +102,16 @@ export default function SetPinPage() {
           <Label htmlFor="confirmPin">{t.auth.confirmPinLabel}</Label>
           <Input
             id="confirmPin"
-            type="password"
+            type="text"
             inputMode="numeric"
             pattern="\d{4,6}"
             required
-            autoComplete="off"
+            autoComplete="one-time-code"
+            data-1p-ignore
+            data-lpignore="true"
             value={confirmPin}
             onChange={(e) => setConfirmPin(e.target.value)}
-            className="h-14 text-lg tabular-nums"
+            className="h-14 text-lg tabular-nums [-webkit-text-security:disc]"
           />
         </div>
 

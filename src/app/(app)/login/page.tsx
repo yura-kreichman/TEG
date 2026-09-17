@@ -187,17 +187,24 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1">
               <Label htmlFor="pin">{t.auth.pinLabel}</Label>
+              {/* Не type="password" (запрос владельца 2026-09-17): на поле
+                  пароля Chrome после входа по ПИН предлагает «Обновить пароль?»
+                  для сохранённой почты — и autoComplete="off" игнорирует.
+                  ПИН — не пароль браузера. Точки даёт CSS, one-time-code
+                  менеджеры паролей не сохраняют. Так же во всех полях ПИН. */}
               <Input
                 id="pin"
-                type="password"
+                type="text"
                 inputMode="numeric"
                 pattern="\d{4,6}"
                 required
-                autoComplete="off"
+                autoComplete="one-time-code"
+                data-1p-ignore
+                data-lpignore="true"
                 autoFocus
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                className="h-14 text-lg tabular-nums"
+                className="h-14 text-lg tabular-nums [-webkit-text-security:disc]"
               />
             </div>
 

@@ -144,17 +144,21 @@ export default function OperatorLoginPage() {
               thicker border than the owner-side inputs, min 56px tap target. */}
           <div className="flex flex-col gap-1">
             <Label htmlFor="pin">{t.auth.pinLabel}</Label>
+            {/* Не type="password" — см. поле ПИН на /login: иначе Chrome
+                предлагает «Обновить пароль?». */}
             <Input
               id="pin"
-              type="password"
+              type="text"
               inputMode="numeric"
               pattern="\d{4,6}"
               required
-              autoComplete="off"
+              autoComplete="one-time-code"
+              data-1p-ignore
+              data-lpignore="true"
               autoFocus
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              className="h-14 border-2 text-lg tabular-nums"
+              className="h-14 border-2 text-lg tabular-nums [-webkit-text-security:disc]"
             />
           </div>
 
@@ -175,15 +179,17 @@ export default function OperatorLoginPage() {
             <Label htmlFor="owner-pin">{t.auth.pinLabel}</Label>
             <Input
               id="owner-pin"
-              type="password"
+              type="text"
               inputMode="numeric"
               pattern="\d{4,6}"
               required
-              autoComplete="off"
+              autoComplete="one-time-code"
+              data-1p-ignore
+              data-lpignore="true"
               autoFocus
               value={ownerPin}
               onChange={(e) => setOwnerPin(e.target.value)}
-              className="h-14 border-2 text-lg tabular-nums"
+              className="h-14 border-2 text-lg tabular-nums [-webkit-text-security:disc]"
             />
           </div>
 
