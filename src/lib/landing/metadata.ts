@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import sharp from "sharp";
 import type { LandingRenderData } from "@/lib/landing/get-render-data";
 import { OG_LOCALES, isLocale } from "@/lib/locales";
-import { extractPlainText } from "@/lib/rich-text";
+import { landingDescription } from "@/lib/landing/description";
 
 // Реальные размеры OG-картинки. До 2026-08-15 здесь стояли зашитые 1200x630
 // из спеки — но приводить загруженное фото к этому размеру никто не приводит
@@ -43,7 +43,7 @@ export async function buildLandingMetadata(
 ): Promise<Metadata> {
   const canonical = `${siteUrl}/s/${data.slug}`;
   const title = data.metaTitleOverride ?? data.tagline;
-  const description = (data.metaDescriptionOverride ?? extractPlainText(data.aboutText)).slice(0, 160);
+  const description = landingDescription(data);
   const ogImageRelative = data.galleryPhotos[0]?.url ?? data.zones.find((z) => z.photoUrl)?.photoUrl ?? null;
   const ogImage = ogImageRelative ? `${siteUrl}${ogImageRelative}` : undefined;
   const ogImageSize = ogImageRelative ? await measureUploadedImage(ogImageRelative) : null;

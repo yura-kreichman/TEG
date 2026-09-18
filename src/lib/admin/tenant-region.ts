@@ -87,6 +87,16 @@ for (const [code, [name, zones]] of Object.entries(ZONES_BY_COUNTRY)) {
   for (const zone of zones) COUNTRY_BY_ZONE.set(zone, { code, name });
 }
 
+/**
+ * ISO-код страны по поясу тенанта — для `addressCountry` в разметке лендинга
+ * (2026-09-18). Жёстко прописать страну нельзя: тенанты бывают не только из
+ * Молдовы. null — пояс не в таблице или не выставлен, и тогда страну лучше
+ * не указывать вовсе, чем указать чужую.
+ */
+export function countryCodeOfTimezone(timezone: string): string | null {
+  return COUNTRY_BY_ZONE.get(timezone)?.code ?? null;
+}
+
 /** Флаг страны из её ISO-кода — regional indicator symbols, без картинок. */
 function flagOf(countryCode: string): string {
   return String.fromCodePoint(...[...countryCode].map((c) => 0x1f1a5 + c.charCodeAt(0)));

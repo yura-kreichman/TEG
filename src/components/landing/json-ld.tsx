@@ -1,13 +1,38 @@
 import type { LandingRenderData } from "@/lib/landing/get-render-data";
 import { contactHref } from "@/lib/landing/contact-links";
-import { extractPlainText } from "@/lib/rich-text";
+import { landingDescription } from "@/lib/landing/description";
+import { countryCodeOfTimezone } from "@/lib/admin/tenant-region";
+import { zonePrices } from "@/lib/landing/prices";
 
 const WEEKDAY_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-// JSON-LD (docs/spec/08-landing.md, SEO): LocalBusiness на каждую точку, БЕЗ
-// priceRange (валюта в системе не ведётся), sameAs на заполненные соцсети,
-// ImageObject для витринных фото зон. Один <script type="application/ld+json">
-// с @graph — валиднее и легче парсить валидатору, чем несколько тегов.
+// JSON-LD (docs/spec/08-landing.md, SEO): LocalBusiness на каждую точку,
+// sameAs на заполненные соцсети, ImageObject для витринных фото зон. Один
+// <script type="application/ld+json"> с @graph — валиднее и легче парсить
+// валидатору, чем несколько тегов.
+
+/**
+ * Валюта для priceRange — только для разметки, в приложении не меняется.
+ *
+ * Костыль для Приднестровья (решение владельца 2026-09-18): тенанты из
+ * Тирасполя выбирают RUB, потому что приднестровского рубля в справочнике
+ * нет, и разметка сообщила бы поисковику российские рубли. Страна по поясу
+ * — Молдова, а RUB молдавский тенант сам не выберет, так что это сочетание и
+ * есть Приднестровье; поисковику отдаём MDL.
+ */
+function seoCurrency(currency: string | null, country: string | null): string | null {
+  if (currency === "RUB" && country === "MD") return "MDL";
+  return currency;
+}
+
+// «35–50 MDL» — диапазон настоящих цен зон точки. Числа без валюты
+// поисковику ничего не говорят, поэтому без валюты priceRange нет вовсе.
+function priceRangeOf(prices: number[], currency: string | null): string | null {
+  if (!currency || prices.length === 0) return null;
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  return min === max ? `${min} ${currency}` : `${min}–${max} ${currency}`;
+}
 export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; baseUrl: string }) {
   // Канонический URL страницы, не корень домена — LocalBusiness.url должен
   // указывать на собственную страницу бизнеса (найдено при аудите SEO
@@ -52,9 +77,28 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
   const photoId = (id: string) => `${canonicalUrl}#photo-${id}`;
 
   // Описание компании для графа — тот же текст, что уходит в мета-описание
-  // страницы: короткая выжимка «О нас». Обрезка по той же границе, чтобы в
-  // разметке и в сниппете не расходились формулировки.
-  const description = (data.metaDescriptionOverride ?? extractPlainText(data.aboutText)).slice(0, 160) || null;
+  // страницы: короткая выжимка «О нас», обрезанная тем же правилом.
+  const description = landingDescription(data) || null;
+
+  // Страна для адресов — из часового пояса тенанта (тот же вывод, что в
+  // админке). Жёстко прописать нельзя: тенанты не только из Молдовы (на
+  // проде 2026-09-18 — ещё Москва и Иркутск). Неизвестный пояс — без страны.
+  const addressCountry = countryCodeOfTimezone(data.tenant.timezone);
+  const currency = seoCurrency(data.tenant.currency, addressCountry);
+
+  // Цены — только если владелец показывает их на странице: скрытые им цены
+  // разметка раскрывать не должна.
+  const priceRangeByPoint = new Map(
+    data.points.map((point) => [
+      point.id,
+      data.showPrices
+        ? priceRangeOf(
+            data.zones.filter((z) => z.pointId === point.id).flatMap((z) => zonePrices(z.tariffs)),
+            currency
+          )
+        : null,
+    ])
+  );
 
   // Фотографии для выдачи: сначала галерея (главные снимки, владелец сам
   // ставит их порядок), следом витринные фото зон. До 2026-08-15 в
@@ -129,20 +173,39 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
   ];
 
   const localBusinesses = data.points.map((point) => ({
-    "@type": "LocalBusiness",
+    // Подтип LocalBusiness, а не он сам: все тенанты RentOS — детские
+    // развлечения, и точный тип поисковику понятнее общего. Google принимает
+    // любой подтип LocalBusiness наравне с ним.
+    "@type": "EntertainmentBusiness",
     "@id": `${canonicalUrl}#business-${point.id}`,
-    name: `${data.tenant.name} — ${point.name}`,
+    // Точка, названная как сама компания, давала «Керен Центр — Керен Центр»
+    // (найдено на проде 2026-09-18) — в этом случае одно название.
+    name:
+      point.name.trim().toLowerCase() === data.tenant.name.trim().toLowerCase()
+        ? data.tenant.name
+        : `${data.tenant.name} — ${point.name}`,
     url: canonicalUrl,
     parentOrganization: { "@id": ORG_ID },
     // Фотографии, а не логотип: документация Google по LocalBusiness просит
     // в image именно снимки заведения, логотип живёт отдельным полем у
     // Organization. Логотип остаётся запасным вариантом, когда фото нет.
     ...(photoUrls.length > 0 ? { image: photoUrls } : logoUrl ? { image: logoUrl } : {}),
-    ...(point.address ? { address: { "@type": "PostalAddress", streetAddress: point.address, addressLocality: point.city ?? undefined } } : {}),
+    // Адрес и без улицы полезен: город со страной — уже местный сигнал.
+    ...(point.address || point.city
+      ? {
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: point.address ?? undefined,
+            addressLocality: point.city ?? undefined,
+            addressCountry: addressCountry ?? undefined,
+          },
+        }
+      : {}),
     ...(point.latitude != null && point.longitude != null
       ? { geo: { "@type": "GeoCoordinates", latitude: point.latitude, longitude: point.longitude } }
       : {}),
     ...(point.mapsUrl ? { hasMap: point.mapsUrl } : {}),
+    ...(priceRangeByPoint.get(point.id) ? { priceRange: priceRangeByPoint.get(point.id) } : {}),
     ...(data.contacts.phone ? { telephone: data.contacts.phone } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
     ...(point.openingHours.some((h) => h.isOpen)

@@ -22,6 +22,9 @@ export interface LandingRenderData {
     accentScheme: string;
     logoUrl: string | null;
     timezone: string;
+    // Код валюты из справочника (src/lib/currency.ts) или null — не указана.
+    // На странице цены идут без знака; нужна только для priceRange в JSON-LD.
+    currency: string | null;
   };
   slug: string;
   status: "draft" | "published";
@@ -108,7 +111,7 @@ export interface LandingRenderData {
 export async function getLandingRenderData(tenantId: string): Promise<LandingRenderData | null> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { name: true, slug: true, locale: true, accentScheme: true, logoUrl: true, timezone: true },
+    select: { name: true, slug: true, locale: true, accentScheme: true, logoUrl: true, timezone: true, currency: true },
   });
   if (!tenant?.slug) return null;
 
@@ -235,6 +238,7 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
       accentScheme: tenant.accentScheme,
       logoUrl: tenant.logoUrl,
       timezone: tenant.timezone,
+      currency: tenant.currency,
     },
     slug: tenant.slug,
     status: landing.status,

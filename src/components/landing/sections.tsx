@@ -19,6 +19,7 @@ import { MARKETING_SITE_URL } from "@/lib/billing";
 import type { Dictionary } from "@/lib/i18n";
 import { isLocale, type Locale } from "@/lib/locales";
 import { formatMoney } from "@/lib/format";
+import { zonePrices } from "@/lib/landing/prices";
 import { RichText } from "@/components/landing/rich-text";
 import { isRichContentEmpty } from "@/lib/rich-text";
 import { cn } from "@/lib/utils";
@@ -245,26 +246,16 @@ export function VideoSection({ data, lp }: { data: LandingRenderData; lp: LP }) 
 // пользователем в тот же день, формат остаётся прежним). Лимит тарифов на
 // зону — 2 (докс 02-money.md), но join написан общим случаем на N значений.
 /**
- * Цены зоны для витрины.
- *
- * Берём цены ВАРИАНТОВ, если они есть, и только иначе — цену самого тарифа.
- * У «За вход» (Прибывания) и «С таймером» (Пуски) стоимость живёт в
- * вариантах, а Tariff.price остаётся нулевым placeholder-ом: лендинг читал
- * только его и печатал «Цена: 0» при включённом показе цен (найдено на
- * боевых данных 2026-09-02 у Игроленда — в зоне лежали 300 / 450 / 650).
- *
- * Нули отбрасываем: тариф-placeholder не должен появляться в списке рядом с
- * настоящими ценами. Если после этого не осталось ничего — строки цен нет
- * вовсе, что честнее нуля.
+ * Строка цен зоны для витрины. Какие цены считаются настоящими — правило
+ * в zonePrices (lib/landing/prices.ts), общее с priceRange в JSON-LD. Если не
+ * осталось ни одной — строки цен нет вовсе, что честнее нуля.
  */
 function formatPriceLine(
   tariffs: { price: number; optionPrices?: number[] }[],
   lp: LP,
   locale: Locale
 ): string | null {
-  const prices = tariffs
-    .flatMap((t) => (t.optionPrices && t.optionPrices.length > 0 ? t.optionPrices : [t.price]))
-    .filter((p) => p > 0);
+  const prices = zonePrices(tariffs);
   if (prices.length === 0) return null;
   const label = prices.length === 1 ? lp.priceSingleLabel : lp.pricesMultipleLabel;
   const values = prices.map((p) => formatMoney(p, locale));
@@ -595,7 +586,15 @@ export function ContactsSection({ data, lp, weekdayNames }: { data: LandingRende
                     {point.address ? (
                       <p className="lt-muted-text flex min-w-0 items-start gap-1.5 text-[0.8125rem]">
                         <MapPin className="mt-0.5 size-3.5 shrink-0" />
-                        <span className="truncate">{point.address}</span>
+                        {/* Город перед адресом (docs/spec/08-landing.md, «Гео-контент»:
+                            адреса текстом в HTML) — «Центр города» без города
+                            ничего не говорит ни посетителю, ни поисковику. Если
+                            владелец уже вписал город в адрес, не повторяем. */}
+                        <span className="truncate">
+                          {point.city && !point.address.toLowerCase().includes(point.city.toLowerCase())
+                            ? `${point.city}, ${point.address}`
+                            : point.address}
+                        </span>
                       </p>
                     ) : (
                       <span />
