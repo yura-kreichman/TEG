@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Kirish",
-    "pinJustSet": "PIN-kod saqlandi. Endi u orqali kirishingiz mumkin.",
     "tabPin": "PIN-kod orqali kirish",
     "tabPassword": "Login va parol",
     "deviceUnknownHint": "Ushbu qurilmada hali kirish amalga oshirilmagan. Login va parol bilan kiring — shundan keyin PIN-kod orqali kirish email va parolsiz mavjud boʻladi.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Trampolin 1",
     "demoOption30": "30 daqiqa",
     "demoOption60": "60 daqiqa",
-    "demoOperatorName": "Xodim 1"
+    "demoOperatorName": "Xodim 1",
+    "checklistTitle": "Birinchi qadamlar",
+    "checklistCounter": "{total} tadan {done}",
+    "checklistActionsLabel": "Birinchi qadamlar amallari",
+    "hideChecklist": "Yashirish",
+    "stepPoint": "Nuqta",
+    "stepZone": "Tariflari va aktivlari bor zona",
+    "stepZoneOn": "Zona yoqilgan",
+    "stepOperator": "Xodim",
+    "stepDevice": "Nuqtadagi planshet",
+    "stepFirstWork": "Nuqtadagi birinchi ish",
+    "stepLanding": "Mijozlar uchun sahifa",
+    "hints": {
+      "addPoint": "Nuqta qo‘shing — ijarangiz ishlaydigan joy",
+      "activatePoint": "«{point}» nuqtasini yoqing: ··· → «{activatePointMenu}»",
+      "addZone": "«{point}» nuqtasiga zona qo‘shing",
+      "addTariff": "«{zone}» zonasiga tarif qo‘shing",
+      "addAsset": "«{zone}» zonasiga aktiv qo‘shing",
+      "activateAsset": "«{zone}» zonasidagi «{asset}» aktivini yoqing: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "«{zone}» zonasidagi aktivga chipta narxini belgilang",
+      "activateZone": "«{zone}» zonasini yoqing: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Zona tayyor bo‘lgach, uni yoqing: ··· → «{activateZoneMenu}»",
+      "addOperator": "Xodim qo‘shing — u nuqtada o‘z PIN-kodi bilan kiradi",
+      "addDevice": "Nuqtaning plansheti yoki telefonini bog‘lang: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Xodim planshetga PIN-kod bilan kirib, ishni boshlaydi",
+      "publishLanding": "Xohishga ko‘ra: lendingni to‘ldirib, chop eting"
+    }
   },
   "operatorGuide": {
     "navLabel": "Qanday ishlash kerak",

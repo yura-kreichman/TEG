@@ -389,7 +389,10 @@
     "deleteOwnerConfirmPasswordLabel": "Ваш пароль администратора",
     "deleteOwnerConfirmNamePrefix": "Введите название компании для подтверждения:",
     "deleteOwnerConfirmNameHint": "Это действие нельзя отменить",
-    "deleteOwnerConfirmButton": "Удалить владельца навсегда"
+    "deleteOwnerConfirmButton": "Удалить владельца навсегда",
+    "setupLabel": "Настройка:",
+    "setupDone": "готово",
+    "setupProgress": "{done} из {total}"
   },
   "dataCleanup": {
     "title": "Очистка данных",
@@ -640,7 +643,6 @@
   },
   "auth": {
     "loginTitle": "Вход",
-    "pinJustSet": "ПИН-код сохранён. Теперь можно войти с его помощью.",
     "tabPin": "Вход по ПИН-коду",
     "tabPassword": "Логин и пароль",
     "deviceUnknownHint": "На этом устройстве ещё не выполнялся вход. Войдите с логином и паролем — после этого вход по ПИН-коду будет доступен без email и пароля.",
@@ -1876,7 +1878,33 @@
     "demoAssetStays": "Батут 1",
     "demoOption30": "30 минут",
     "demoOption60": "60 минут",
-    "demoOperatorName": "Оператор 1"
+    "demoOperatorName": "Оператор 1",
+    "checklistTitle": "Первые шаги",
+    "checklistCounter": "{done} из {total}",
+    "checklistActionsLabel": "Действия с первыми шагами",
+    "hideChecklist": "Скрыть",
+    "stepPoint": "Точка",
+    "stepZone": "Зона с тарифами и активами",
+    "stepZoneOn": "Зона включена",
+    "stepOperator": "Сотрудник",
+    "stepDevice": "Планшет на точке",
+    "stepFirstWork": "Первая работа на точке",
+    "stepLanding": "Страница для клиентов",
+    "hints": {
+      "addPoint": "Добавьте точку — место, где работает ваш прокат",
+      "activatePoint": "Включите точку «{point}»: ··· → «{activatePointMenu}»",
+      "addZone": "Добавьте зону в точку «{point}»",
+      "addTariff": "Добавьте тариф в зону «{zone}»",
+      "addAsset": "Добавьте актив в зону «{zone}»",
+      "activateAsset": "Включите актив «{asset}» в зоне «{zone}»: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "Задайте цену билета у актива в зоне «{zone}»",
+      "activateZone": "Включите зону «{zone}»: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Когда зона будет готова, включите её: ··· → «{activateZoneMenu}»",
+      "addOperator": "Заведите сотрудника — он будет входить на точке по своему ПИН-коду",
+      "addDevice": "Привяжите планшет или телефон точки: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Сотрудник входит на планшете по ПИН-коду и начинает работу",
+      "publishLanding": "По желанию: заполните и опубликуйте лендинг"
+    }
   },
   "operatorGuide": {
     "navLabel": "Как работать",

@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Уваход",
-    "pinJustSet": "ПІН-код захаваны. Цяпер можна ўвайсці з яго дапамогай.",
     "tabPin": "Уваход па ПІН-коду",
     "tabPassword": "Лагін і пароль",
     "deviceUnknownHint": "На гэтай прыладзе яшчэ не выконваўся ўваход. Увайдзіце з лагінам і паролем — пасля гэтага ўваход па ПІН-коду будзе даступны без email і пароля.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Батут 1",
     "demoOption30": "30 хвілін",
     "demoOption60": "60 хвілін",
-    "demoOperatorName": "Супрацоўнік 1"
+    "demoOperatorName": "Супрацоўнік 1",
+    "checklistTitle": "Першыя крокі",
+    "checklistCounter": "{done} з {total}",
+    "checklistActionsLabel": "Дзеянні з першымі крокамі",
+    "hideChecklist": "Схаваць",
+    "stepPoint": "Кропка",
+    "stepZone": "Зона з тарыфамі і актывамі",
+    "stepZoneOn": "Зона ўключана",
+    "stepOperator": "Супрацоўнік",
+    "stepDevice": "Планшэт на кропцы",
+    "stepFirstWork": "Першая праца на кропцы",
+    "stepLanding": "Старонка для кліентаў",
+    "hints": {
+      "addPoint": "Дадайце кропку — месца, дзе працуе ваш пракат",
+      "activatePoint": "Уключыце кропку «{point}»: ··· → «{activatePointMenu}»",
+      "addZone": "Дадайце зону ў кропку «{point}»",
+      "addTariff": "Дадайце тарыф у зону «{zone}»",
+      "addAsset": "Дадайце актыў у зону «{zone}»",
+      "activateAsset": "Уключыце актыў «{asset}» у зоне «{zone}»: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "Задайце цану білета ў актыву ў зоне «{zone}»",
+      "activateZone": "Уключыце зону «{zone}»: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Калі зона будзе гатова, уключыце яе: ··· → «{activateZoneMenu}»",
+      "addOperator": "Дадайце супрацоўніка — ён будзе ўваходзіць на кропцы па сваім ПІН-кодзе",
+      "addDevice": "Прывяжыце планшэт або тэлефон кропкі: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Супрацоўнік уваходзіць на планшэце па ПІН-кодзе і пачынае працу",
+      "publishLanding": "Па жаданні: запоўніце і апублікуйце лендынг"
+    }
   },
   "operatorGuide": {
     "navLabel": "Як працаваць",

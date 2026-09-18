@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "შესვლა",
-    "pinJustSet": "PIN-კოდი შენახულია. ახლა შეგიძლიათ შახვიდეთ მისი დახმარებით.",
     "tabPin": "შესვლა PIN-კოდით",
     "tabPassword": "შესვლის სახელი და პაროლი",
     "deviceUnknownHint": "ამ მოწყობილობაზე შესვლა ჯერ არ განხორციელებულა. შედით შესვლის სახელითა და პაროლით — ამის შემდეგ PIN-კოდით შესვლა ხელმისაწვდომი იქნება email-ისა და პაროლის გარეშე.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "ბატუტი 1",
     "demoOption30": "30 წუთი",
     "demoOption60": "60 წუთი",
-    "demoOperatorName": "თანამშრომელი 1"
+    "demoOperatorName": "თანამშრომელი 1",
+    "checklistTitle": "პირველი ნაბიჯები",
+    "checklistCounter": "{done}/{total}",
+    "checklistActionsLabel": "პირველი ნაბიჯების მოქმედებები",
+    "hideChecklist": "დამალვა",
+    "stepPoint": "წერტილი",
+    "stepZone": "ზონა ტარიფებით და აქტივებით",
+    "stepZoneOn": "ზონა ჩართულია",
+    "stepOperator": "თანამშრომელი",
+    "stepDevice": "პლანშეტი წერტილზე",
+    "stepFirstWork": "პირველი სამუშაო წერტილზე",
+    "stepLanding": "გვერდი კლიენტებისთვის",
+    "hints": {
+      "addPoint": "დაამატეთ წერტილი — ადგილი, სადაც მუშაობს თქვენი გაქირავება",
+      "activatePoint": "ჩართეთ წერტილი „{point}“: ··· → „{activatePointMenu}“",
+      "addZone": "დაამატეთ ზონა წერტილში „{point}“",
+      "addTariff": "დაამატეთ ტარიფი ზონაში „{zone}“",
+      "addAsset": "დაამატეთ აქტივი ზონაში „{zone}“",
+      "activateAsset": "ჩართეთ აქტივი „{asset}“ ზონაში „{zone}“: ··· → „{activateAssetMenu}“",
+      "addTicketPrice": "მიუთითეთ ბილეთის ფასი აქტივს ზონაში „{zone}“",
+      "activateZone": "ჩართეთ ზონა „{zone}“: ··· → „{activateZoneMenu}“",
+      "zoneOnLater": "როცა ზონა მზად იქნება, ჩართეთ: ··· → „{activateZoneMenu}“",
+      "addOperator": "დაამატეთ თანამშრომელი — ის წერტილზე საკუთარი PIN-კოდით შევა",
+      "addDevice": "მიაბით წერტილის პლანშეტი ან ტელეფონი: „{pointsSection}“ → „{addDeviceMenu}“",
+      "firstWork": "თანამშრომელი პლანშეტზე PIN-კოდით შედის და იწყებს მუშაობას",
+      "publishLanding": "სურვილისამებრ: შეავსეთ და გამოაქვეყნეთ ლენდინგი"
+    }
   },
   "operatorGuide": {
     "navLabel": "როგორ ვიმუშაოთ",

@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Giriş",
-    "pinJustSet": "PIN kodu kaydedildi. Artık onunla giriş yapabilirsiniz.",
     "tabPin": "PIN kodu ile giriş",
     "tabPassword": "Kullanıcı adı ve parola",
     "deviceUnknownHint": "Bu cihazda henüz giriş yapılmadı. Kullanıcı adı ve parolayla giriş yapın — bundan sonra e-posta ve parola olmadan PIN kodu ile giriş yapabilirsiniz.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Trambolin 1",
     "demoOption30": "30 dakika",
     "demoOption60": "60 dakika",
-    "demoOperatorName": "Çalışan 1"
+    "demoOperatorName": "Çalışan 1",
+    "checklistTitle": "İlk adımlar",
+    "checklistCounter": "{done}/{total}",
+    "checklistActionsLabel": "İlk adımlar işlemleri",
+    "hideChecklist": "Gizle",
+    "stepPoint": "Nokta",
+    "stepZone": "Tarifeli ve varlıklı bölge",
+    "stepZoneOn": "Bölge açık",
+    "stepOperator": "Çalışan",
+    "stepDevice": "Noktadaki tablet",
+    "stepFirstWork": "Noktada ilk çalışma",
+    "stepLanding": "Müşteriler için sayfa",
+    "hints": {
+      "addPoint": "Bir nokta ekleyin — kiralamanızın çalıştığı yer",
+      "activatePoint": "“{point}” noktasını açın: ··· → “{activatePointMenu}”",
+      "addZone": "“{point}” noktasına bir bölge ekleyin",
+      "addTariff": "“{zone}” bölgesine bir tarife ekleyin",
+      "addAsset": "“{zone}” bölgesine bir varlık ekleyin",
+      "activateAsset": "“{zone}” bölgesindeki “{asset}” varlığını açın: ··· → “{activateAssetMenu}”",
+      "addTicketPrice": "“{zone}” bölgesindeki bir varlığa bilet fiyatı girin",
+      "activateZone": "“{zone}” bölgesini açın: ··· → “{activateZoneMenu}”",
+      "zoneOnLater": "Bölge hazır olduğunda açın: ··· → “{activateZoneMenu}”",
+      "addOperator": "Bir çalışan ekleyin — noktada kendi PIN koduyla giriş yapacak",
+      "addDevice": "Noktanın tabletini veya telefonunu bağlayın: “{pointsSection}” → “{addDeviceMenu}”",
+      "firstWork": "Çalışan tablette PIN koduyla giriş yapar ve işe başlar",
+      "publishLanding": "İsteğe bağlı: tanıtım sayfasını doldurup yayınlayın"
+    }
   },
   "operatorGuide": {
     "navLabel": "Nasıl çalışılır",

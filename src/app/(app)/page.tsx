@@ -4,6 +4,8 @@ import { getSessionUserId } from "@/lib/auth";
 import { getActivatedDevice } from "@/lib/operator-auth";
 import { OwnerShell } from "@/components/owner-shell";
 import { OnboardingWelcomeSheet } from "@/components/onboarding-welcome-sheet";
+import { SetupChecklistCard } from "@/components/setup-checklist-card";
+import { computeSetupProgress } from "@/lib/onboarding/setup-progress";
 import { WelcomeCard, OwnerDashboardCard } from "./dashboard-home";
 
 export default async function Home() {
@@ -45,6 +47,12 @@ export default async function Home() {
     !user.tenant!.onboardingDismissedAt &&
     (await prisma.point.count({ where: { tenantId: user.tenant!.id } })) === 0;
 
+  // «Первые шаги» (docs/spec/13-onboarding.md) — пока настройка не пройдена
+  // и владелец не скрыл карточку. Скрытую не считаем вовсе; пройденные шаги
+  // прячут её сами.
+  const setupProgress =
+    user.tenant && !user.tenant.setupChecklistHiddenAt ? await computeSetupProgress(user.tenant.id) : null;
+
   return (
     <OwnerShell>
       <OwnerDashboardCard
@@ -52,6 +60,7 @@ export default async function Home() {
         tenantName={user.tenant?.name ?? null}
         tenantLogoUrl={user.tenant?.logoUrl ?? null}
         hasPin={Boolean(user.pinHash)}
+        setupCard={setupProgress && !setupProgress.complete ? <SetupChecklistCard progress={setupProgress} /> : null}
       />
       <OnboardingWelcomeSheet initialOpen={showOnboarding} />
     </OwnerShell>

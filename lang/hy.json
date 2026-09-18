@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Մուտք",
-    "pinJustSet": "PIN-կոդը պահպանված է. Այժմ կարող եք մուտք գործել դրա միջոցով.",
     "tabPin": "Մուտք PIN-կոդով",
     "tabPassword": "Մուտքանուն և գաղտնաբառ",
     "deviceUnknownHint": "Այս սարքում դեռ մուտք չի կատարվել. Մուտք գործեք մուտքանունով և գաղտնաբառով — դրանից հետո PIN-կոդով մուտքը հասանելի կլինի առանց email-ի և գաղտնաբառի.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Ցատկան 1",
     "demoOption30": "30 րոպե",
     "demoOption60": "60 րոպե",
-    "demoOperatorName": "Աշխատակից 1"
+    "demoOperatorName": "Աշխատակից 1",
+    "checklistTitle": "Առաջին քայլեր",
+    "checklistCounter": "{done}/{total}",
+    "checklistActionsLabel": "Առաջին քայլերի գործողություններ",
+    "hideChecklist": "Թաքցնել",
+    "stepPoint": "Կետ",
+    "stepZone": "Գոտի՝ սակագներով և ակտիվներով",
+    "stepZoneOn": "Գոտին միացված է",
+    "stepOperator": "Աշխատակից",
+    "stepDevice": "Պլանշետ կետում",
+    "stepFirstWork": "Առաջին աշխատանքը կետում",
+    "stepLanding": "Էջ հաճախորդների համար",
+    "hints": {
+      "addPoint": "Ավելացրեք կետ՝ վայրը, որտեղ աշխատում է ձեր վարձույթը",
+      "activatePoint": "Միացրեք «{point}» կետը՝ ··· → «{activatePointMenu}»",
+      "addZone": "Ավելացրեք գոտի «{point}» կետում",
+      "addTariff": "Ավելացրեք սակագին «{zone}» գոտում",
+      "addAsset": "Ավելացրեք ակտիվ «{zone}» գոտում",
+      "activateAsset": "Միացրեք «{asset}» ակտիվը «{zone}» գոտում՝ ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "Սահմանեք տոմսի գինը «{zone}» գոտու ակտիվի համար",
+      "activateZone": "Միացրեք «{zone}» գոտին՝ ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Երբ գոտին պատրաստ լինի, միացրեք այն՝ ··· → «{activateZoneMenu}»",
+      "addOperator": "Ավելացրեք աշխատակից․ նա կմտնի կետում իր PIN-կոդով",
+      "addDevice": "Կապեք կետի պլանշետը կամ հեռախոսը՝ «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Աշխատակիցը մտնում է պլանշետում PIN-կոդով և սկսում աշխատանքը",
+      "publishLanding": "Ըստ ցանկության՝ լրացրեք և հրապարակեք լենդինգը"
+    }
   },
   "operatorGuide": {
     "navLabel": "Ինչպես աշխատել",

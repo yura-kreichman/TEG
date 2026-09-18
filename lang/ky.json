@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Кирүү",
-    "pinJustSet": "ПИН-код сакталды. Эми ал аркылуу кирүүгө болот.",
     "tabPin": "ПИН-код менен кирүү",
     "tabPassword": "Логин жана сырсөз",
     "deviceUnknownHint": "Бул түзмөктө азырынча кирүү болгон эмес. Логин жана сырсөз менен кириңиз — андан кийин ПИН-код менен кирүү email жана сырсөзсүз жеткиликтүү болот.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Батут 1",
     "demoOption30": "30 мүнөт",
     "demoOption60": "60 мүнөт",
-    "demoOperatorName": "Кызматкер 1"
+    "demoOperatorName": "Кызматкер 1",
+    "checklistTitle": "Алгачкы кадамдар",
+    "checklistCounter": "{total} ичинен {done}",
+    "checklistActionsLabel": "Алгачкы кадамдар боюнча аракеттер",
+    "hideChecklist": "Жашыруу",
+    "stepPoint": "Чекит",
+    "stepZone": "Тарифтери жана активдери бар аймак",
+    "stepZoneOn": "Аймак күйгүзүлгөн",
+    "stepOperator": "Кызматкер",
+    "stepDevice": "Чекиттеги планшет",
+    "stepFirstWork": "Чекиттеги алгачкы иш",
+    "stepLanding": "Кардарлар үчүн барак",
+    "hints": {
+      "addPoint": "Чекит кошуңуз — прокатыңыз иштеген жер",
+      "activatePoint": "«{point}» чекитин күйгүзүңүз: ··· → «{activatePointMenu}»",
+      "addZone": "«{point}» чекитине аймак кошуңуз",
+      "addTariff": "«{zone}» аймагына тариф кошуңуз",
+      "addAsset": "«{zone}» аймагына актив кошуңуз",
+      "activateAsset": "«{zone}» аймагындагы «{asset}» активин күйгүзүңүз: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "«{zone}» аймагындагы активке билеттин баасын коюңуз",
+      "activateZone": "«{zone}» аймагын күйгүзүңүз: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Аймак даяр болгондо, аны күйгүзүңүз: ··· → «{activateZoneMenu}»",
+      "addOperator": "Кызматкер кошуңуз — ал чекитте өз ПИН-коду менен кирет",
+      "addDevice": "Чекиттин планшетин же телефонун байлаңыз: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Кызматкер планшетке ПИН-код менен кирип, ишти баштайт",
+      "publishLanding": "Кааласаңыз: лендингди толтуруп, жарыялаңыз"
+    }
   },
   "operatorGuide": {
     "navLabel": "Кантип иштөө керек",

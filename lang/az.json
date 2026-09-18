@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Giriş",
-    "pinJustSet": "PIN-kod saxlanıldı. İndi onunla daxil ola bilərsiniz.",
     "tabPin": "PIN-kodla giriş",
     "tabPassword": "Giriş adı və şifrə",
     "deviceUnknownHint": "Bu cihazda hələ giriş edilməyib. Giriş adı və şifrə ilə daxil olun — bundan sonra PIN-kodla giriş email və şifrəsiz mümkün olacaq.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Batut 1",
     "demoOption30": "30 dəqiqə",
     "demoOption60": "60 dəqiqə",
-    "demoOperatorName": "İşçi 1"
+    "demoOperatorName": "İşçi 1",
+    "checklistTitle": "İlk addımlar",
+    "checklistCounter": "{done}/{total}",
+    "checklistActionsLabel": "İlk addımlar üzrə əməliyyatlar",
+    "hideChecklist": "Gizlət",
+    "stepPoint": "Nöqtə",
+    "stepZone": "Tarifləri və aktivləri olan zona",
+    "stepZoneOn": "Zona işə salınıb",
+    "stepOperator": "İşçi",
+    "stepDevice": "Nöqtədə planşet",
+    "stepFirstWork": "Nöqtədə ilk iş",
+    "stepLanding": "Müştərilər üçün səhifə",
+    "hints": {
+      "addPoint": "Nöqtə əlavə edin — kirayənizin işlədiyi yer",
+      "activatePoint": "“{point}” nöqtəsini işə salın: ··· → “{activatePointMenu}”",
+      "addZone": "“{point}” nöqtəsinə zona əlavə edin",
+      "addTariff": "“{zone}” zonasına tarif əlavə edin",
+      "addAsset": "“{zone}” zonasına aktiv əlavə edin",
+      "activateAsset": "“{zone}” zonasında “{asset}” aktivini işə salın: ··· → “{activateAssetMenu}”",
+      "addTicketPrice": "“{zone}” zonasındakı aktivə bilet qiyməti təyin edin",
+      "activateZone": "“{zone}” zonasını işə salın: ··· → “{activateZoneMenu}”",
+      "zoneOnLater": "Zona hazır olanda onu işə salın: ··· → “{activateZoneMenu}”",
+      "addOperator": "İşçi əlavə edin — o, nöqtədə öz PIN-kodu ilə daxil olacaq",
+      "addDevice": "Nöqtənin planşetini və ya telefonunu bağlayın: “{pointsSection}” → “{addDeviceMenu}”",
+      "firstWork": "İşçi planşetdə PIN-kodla daxil olur və işə başlayır",
+      "publishLanding": "İstəyə görə: təqdimat səhifəsini doldurub dərc edin"
+    }
   },
   "operatorGuide": {
     "navLabel": "Necə işləməli",

@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Accedi",
-    "pinJustSet": "PIN salvato. Ora puoi accedere con esso.",
     "tabPin": "Accedi con PIN",
     "tabPassword": "Login e password",
     "deviceUnknownHint": "Nessuno ha ancora effettuato l'accesso su questo dispositivo. Accedi con login e password — dopo, l'accesso con PIN sarà disponibile senza email o password.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Tappeto elastico 1",
     "demoOption30": "30 minuti",
     "demoOption60": "60 minuti",
-    "demoOperatorName": "Dipendente 1"
+    "demoOperatorName": "Dipendente 1",
+    "checklistTitle": "Primi passi",
+    "checklistCounter": "{done} di {total}",
+    "checklistActionsLabel": "Azioni sui primi passi",
+    "hideChecklist": "Nascondi",
+    "stepPoint": "Punto",
+    "stepZone": "Zona con tariffe e beni",
+    "stepZoneOn": "Zona attivata",
+    "stepOperator": "Dipendente",
+    "stepDevice": "Tablet al punto",
+    "stepFirstWork": "Primo lavoro al punto",
+    "stepLanding": "Pagina per i clienti",
+    "hints": {
+      "addPoint": "Aggiungi un punto — il luogo dove opera il tuo noleggio",
+      "activatePoint": "Attiva il punto «{point}»: ··· → «{activatePointMenu}»",
+      "addZone": "Aggiungi una zona al punto «{point}»",
+      "addTariff": "Aggiungi una tariffa alla zona «{zone}»",
+      "addAsset": "Aggiungi un bene alla zona «{zone}»",
+      "activateAsset": "Attiva il bene «{asset}» nella zona «{zone}»: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "Imposta il prezzo del biglietto su un bene della zona «{zone}»",
+      "activateZone": "Attiva la zona «{zone}»: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Quando la zona è pronta, attivala: ··· → «{activateZoneMenu}»",
+      "addOperator": "Aggiungi un dipendente — accederà al punto con il proprio PIN",
+      "addDevice": "Collega il tablet o il telefono del punto: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Il dipendente accede al tablet con il PIN e inizia a lavorare",
+      "publishLanding": "Facoltativo: compila e pubblica la landing page"
+    }
   },
   "operatorGuide": {
     "navLabel": "Come lavorare",

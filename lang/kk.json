@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Кіру",
-    "pinJustSet": "ПИН-код сақталды. Енді онымен кіруге болады.",
     "tabPin": "ПИН-код арқылы кіру",
     "tabPassword": "Логин және құпия сөз",
     "deviceUnknownHint": "Бұл құрылғыда әлі кіру орындалмаған. Логин мен құпия сөзбен кіріңіз — содан кейін ПИН-код арқылы email мен құпия сөзсіз кіруге болады.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Батут 1",
     "demoOption30": "30 минут",
     "demoOption60": "60 минут",
-    "demoOperatorName": "Қызметкер 1"
+    "demoOperatorName": "Қызметкер 1",
+    "checklistTitle": "Алғашқы қадамдар",
+    "checklistCounter": "{total} ішінен {done}",
+    "checklistActionsLabel": "Алғашқы қадамдар әрекеттері",
+    "hideChecklist": "Жасыру",
+    "stepPoint": "Нүкте",
+    "stepZone": "Тарифтері мен активтері бар аймақ",
+    "stepZoneOn": "Аймақ қосулы",
+    "stepOperator": "Қызметкер",
+    "stepDevice": "Нүктедегі планшет",
+    "stepFirstWork": "Нүктедегі алғашқы жұмыс",
+    "stepLanding": "Клиенттерге арналған бет",
+    "hints": {
+      "addPoint": "Нүкте қосыңыз — прокатыңыз жұмыс істейтін орын",
+      "activatePoint": "«{point}» нүктесін қосыңыз: ··· → «{activatePointMenu}»",
+      "addZone": "«{point}» нүктесіне аймақ қосыңыз",
+      "addTariff": "«{zone}» аймағына тариф қосыңыз",
+      "addAsset": "«{zone}» аймағына актив қосыңыз",
+      "activateAsset": "«{zone}» аймағындағы «{asset}» активін қосыңыз: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "«{zone}» аймағындағы активке билет бағасын қойыңыз",
+      "activateZone": "«{zone}» аймағын қосыңыз: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Аймақ дайын болғанда, оны қосыңыз: ··· → «{activateZoneMenu}»",
+      "addOperator": "Қызметкер қосыңыз — ол нүктеде өз ПИН-кодымен кіреді",
+      "addDevice": "Нүктенің планшетін не телефонын байланыстырыңыз: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Қызметкер планшетке ПИН-кодпен кіріп, жұмысты бастайды",
+      "publishLanding": "Қаласаңыз: лендингті толтырып, жариялаңыз"
+    }
   },
   "operatorGuide": {
     "navLabel": "Қалай жұмыс істеу керек",

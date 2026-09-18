@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Logowanie",
-    "pinJustSet": "Kod PIN zapisany. Teraz możesz się nim zalogować.",
     "tabPin": "Logowanie kodem PIN",
     "tabPassword": "Login i hasło",
     "deviceUnknownHint": "Na tym urządzeniu nie wykonano jeszcze logowania. Zaloguj się loginem i hasłem — po tym logowanie kodem PIN będzie dostępne bez emaila i hasła.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Trampolina 1",
     "demoOption30": "30 minut",
     "demoOption60": "60 minut",
-    "demoOperatorName": "Pracownik 1"
+    "demoOperatorName": "Pracownik 1",
+    "checklistTitle": "Pierwsze kroki",
+    "checklistCounter": "{done} z {total}",
+    "checklistActionsLabel": "Działania dla pierwszych kroków",
+    "hideChecklist": "Ukryj",
+    "stepPoint": "Punkt",
+    "stepZone": "Strefa z taryfami i zasobami",
+    "stepZoneOn": "Strefa włączona",
+    "stepOperator": "Pracownik",
+    "stepDevice": "Tablet w punkcie",
+    "stepFirstWork": "Pierwsza praca w punkcie",
+    "stepLanding": "Strona dla klientów",
+    "hints": {
+      "addPoint": "Dodaj punkt — miejsce, w którym działa twoja wypożyczalnia",
+      "activatePoint": "Włącz punkt „{point}”: ··· → „{activatePointMenu}”",
+      "addZone": "Dodaj strefę do punktu „{point}”",
+      "addTariff": "Dodaj taryfę do strefy „{zone}”",
+      "addAsset": "Dodaj zasób do strefy „{zone}”",
+      "activateAsset": "Włącz zasób „{asset}” w strefie „{zone}”: ··· → „{activateAssetMenu}”",
+      "addTicketPrice": "Ustaw cenę biletu dla zasobu w strefie „{zone}”",
+      "activateZone": "Włącz strefę „{zone}”: ··· → „{activateZoneMenu}”",
+      "zoneOnLater": "Gdy strefa będzie gotowa, włącz ją: ··· → „{activateZoneMenu}”",
+      "addOperator": "Dodaj pracownika — będzie logował się w punkcie własnym kodem PIN",
+      "addDevice": "Powiąż tablet lub telefon punktu: „{pointsSection}” → „{addDeviceMenu}”",
+      "firstWork": "Pracownik loguje się na tablecie kodem PIN i zaczyna pracę",
+      "publishLanding": "Opcjonalnie: uzupełnij i opublikuj stronę docelową"
+    }
   },
   "operatorGuide": {
     "navLabel": "Jak pracować",

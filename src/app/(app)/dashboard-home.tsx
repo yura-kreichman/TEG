@@ -146,11 +146,15 @@ export function OwnerDashboardCard({
   tenantName,
   tenantLogoUrl,
   hasPin,
+  setupCard,
 }: {
   email: string;
   tenantName: string | null;
   tenantLogoUrl: string | null;
   hasPin: boolean;
+  // Карточка «Первые шаги» — считается на сервере (page.tsx), сюда приходит
+  // готовой или null, когда настройка пройдена или карточку скрыли.
+  setupCard?: React.ReactNode;
 }) {
   const t = useI18n();
   const locale = useLocale();
@@ -316,6 +320,8 @@ export function OwnerDashboardCard({
             </Link>
           </div>
         )}
+
+        {setupCard}
 
         {/* "Расчётная выручка" (запрос пользователя 2026-07-25) — над
             "Последними итогами": то, что уже накопилось в "живых" зонах

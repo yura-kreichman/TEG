@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Воридшавӣ",
-    "pinJustSet": "Коди ПИН нигоҳ дошта шуд. Ҳоло метавонед бо кӯмаки он ворид шавед.",
     "tabPin": "Воридшавӣ бо коди ПИН",
     "tabPassword": "Логин ва парол",
     "deviceUnknownHint": "Дар ин дастгоҳ ҳанӯз воридшавӣ иҷро нашудааст. Бо логин ва парол ворид шавед — пас аз он воридшавӣ бо коди ПИН бидуни email ва парол дастрас мешавад.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Батут 1",
     "demoOption30": "30 дақиқа",
     "demoOption60": "60 дақиқа",
-    "demoOperatorName": "Корманд 1"
+    "demoOperatorName": "Корманд 1",
+    "checklistTitle": "Қадамҳои аввал",
+    "checklistCounter": "{done} аз {total}",
+    "checklistActionsLabel": "Амалҳо бо қадамҳои аввал",
+    "hideChecklist": "Пинҳон кардан",
+    "stepPoint": "Нуқта",
+    "stepZone": "Минтақа бо тарифҳо ва активҳо",
+    "stepZoneOn": "Минтақа фаъол аст",
+    "stepOperator": "Корманд",
+    "stepDevice": "Планшет дар нуқта",
+    "stepFirstWork": "Кори аввал дар нуқта",
+    "stepLanding": "Саҳифа барои муштариён",
+    "hints": {
+      "addPoint": "Нуқта илова кунед — ҷое, ки прокати шумо кор мекунад",
+      "activatePoint": "Нуқтаи «{point}»-ро фаъол кунед: ··· → «{activatePointMenu}»",
+      "addZone": "Ба нуқтаи «{point}» минтақа илова кунед",
+      "addTariff": "Ба минтақаи «{zone}» тариф илова кунед",
+      "addAsset": "Ба минтақаи «{zone}» актив илова кунед",
+      "activateAsset": "Активи «{asset}»-ро дар минтақаи «{zone}» фаъол кунед: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "Барои активи минтақаи «{zone}» нархи чиптаро муқаррар кунед",
+      "activateZone": "Минтақаи «{zone}»-ро фаъол кунед: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Вақте минтақа омода шуд, онро фаъол кунед: ··· → «{activateZoneMenu}»",
+      "addOperator": "Корманд илова кунед — ӯ дар нуқта бо PIN-коди худ ворид мешавад",
+      "addDevice": "Планшет ё телефони нуқтаро пайваст кунед: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Корманд дар планшет бо PIN-код ворид шуда, корро оғоз мекунад",
+      "publishLanding": "Ба хоҳиши худ: лендингро пур карда, нашр кунед"
+    }
   },
   "operatorGuide": {
     "navLabel": "Чӣ тавр кор кардан",

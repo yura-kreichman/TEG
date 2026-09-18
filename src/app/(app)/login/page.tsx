@@ -50,10 +50,7 @@ export default function LoginPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pinJustSet, setPinJustSet] = useState(false);
 
-  // One-time sync from browser-only storage on mount; must run post-hydration.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetch("/api/auth/owner-device")
       .then((res) => res.json())
@@ -61,13 +58,7 @@ export default function LoginPage() {
         setDeviceEmail(data.email);
         setDeviceStatus(data.email ? "known" : "unknown");
       });
-
-    if (window.sessionStorage.getItem("teg:pinJustSet")) {
-      setPinJustSet(true);
-      window.sessionStorage.removeItem("teg:pinJustSet");
-    }
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handlePinSubmit(event: FormEvent) {
     event.preventDefault();
@@ -134,8 +125,6 @@ export default function LoginPage() {
   return (
     <AuthCard className="flex flex-col gap-4">
       <h1 className="text-screen-title">{t.auth.loginTitle}</h1>
-
-      {pinJustSet && <p className="text-body-airbnb text-success">{t.auth.pinJustSet}</p>}
 
       <div className="flex rounded-control border border-border p-1 text-sm">
         <button

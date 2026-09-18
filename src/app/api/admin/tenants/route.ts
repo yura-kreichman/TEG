@@ -4,6 +4,7 @@ import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { CLEANUP_INCLUDE, CLEANUP_MIN_AGE_DAYS, classifyTenant, countsOf, daysSince } from "@/lib/admin/tenant-cleanup";
 import { describeTenantRegion } from "@/lib/admin/tenant-region";
 import { PURGE_AFTER_DAYS, purgeScheduleFor } from "@/lib/tenant-lifecycle";
+import { computeSetupProgress } from "@/lib/onboarding/setup-progress";
 
 export async function GET() {
   const admin = await requireSuperAdmin();
@@ -24,9 +25,17 @@ export async function GET() {
     }),
   ]);
 
+  // «Настройка» (docs/spec/13-onboarding.md) — та же функция, что рисует
+  // владельцу карточку «Первые шаги», чтобы админка и кабинет не расходились.
+  // Тенантов единицы, поэтому по запросу на каждого — без батчинга.
+  const setupByTenant = new Map(
+    await Promise.all(tenants.map(async (t) => [t.id, await computeSetupProgress(t.id)] as const))
+  );
+
   return NextResponse.json({
     tenants: tenants.map((t) => {
       const purge = purgeScheduleFor(t);
+      const setup = setupByTenant.get(t.id)!;
       return {
         id: t.id,
         name: t.name,
@@ -52,6 +61,7 @@ export async function GET() {
         // purgeScheduleFor() тем же предикатом, которым удаляет планировщик.
         purgeAt: purge?.at ?? null,
         purgeInDays: purge?.daysLeft ?? null,
+        setup: { doneCount: setup.doneCount, total: setup.total, complete: setup.complete },
       };
     }),
     unmatchedWebhookCount,

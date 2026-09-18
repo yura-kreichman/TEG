@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Sign in",
-    "pinJustSet": "PIN saved. You can now sign in with it.",
     "tabPin": "Sign in with PIN",
     "tabPassword": "Login and password",
     "deviceUnknownHint": "No one has signed in on this device yet. Sign in with your login and password — after that, PIN sign-in will be available without an email or password.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Trampoline 1",
     "demoOption30": "30 minutes",
     "demoOption60": "60 minutes",
-    "demoOperatorName": "Employee 1"
+    "demoOperatorName": "Employee 1",
+    "checklistTitle": "First steps",
+    "checklistCounter": "{done} of {total}",
+    "checklistActionsLabel": "First steps actions",
+    "hideChecklist": "Hide",
+    "stepPoint": "Point",
+    "stepZone": "Zone with tariffs and assets",
+    "stepZoneOn": "Zone switched on",
+    "stepOperator": "Employee",
+    "stepDevice": "Tablet at the point",
+    "stepFirstWork": "First work at the point",
+    "stepLanding": "Page for customers",
+    "hints": {
+      "addPoint": "Add a point — the place where your rental operates",
+      "activatePoint": "Switch on the point “{point}”: ··· → “{activatePointMenu}”",
+      "addZone": "Add a zone to the point “{point}”",
+      "addTariff": "Add a tariff to the zone “{zone}”",
+      "addAsset": "Add an asset to the zone “{zone}”",
+      "activateAsset": "Switch on the asset “{asset}” in the zone “{zone}”: ··· → “{activateAssetMenu}”",
+      "addTicketPrice": "Set a ticket price on an asset in the zone “{zone}”",
+      "activateZone": "Switch on the zone “{zone}”: ··· → “{activateZoneMenu}”",
+      "zoneOnLater": "Once the zone is ready, switch it on: ··· → “{activateZoneMenu}”",
+      "addOperator": "Add an employee — they will sign in at the point with their own PIN",
+      "addDevice": "Bind the point's tablet or phone: “{pointsSection}” → “{addDeviceMenu}”",
+      "firstWork": "The employee signs in on the tablet with their PIN and starts work",
+      "publishLanding": "Optional: fill in and publish the landing page"
+    }
   },
   "operatorGuide": {
     "navLabel": "How to work",

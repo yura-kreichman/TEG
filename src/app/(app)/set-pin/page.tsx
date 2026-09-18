@@ -57,10 +57,11 @@ export default function SetPinPage() {
         return;
       }
 
-      // Log out so the user immediately proves the new PIN works by logging back in with it.
-      await fetch("/api/auth/logout", { method: "POST" });
-      window.sessionStorage.setItem("teg:pinJustSet", "1");
-      router.push("/login");
+      // Сразу на главную, без выхода из аккаунта (docs/spec/13-onboarding.md):
+      // раньше здесь был выход «чтобы проверить новый ПИН», и новый владелец
+      // сразу после регистрации оказывался на экране входа — «меня выкинуло».
+      // Проверить ПИН он успеет при следующем входе.
+      router.push("/");
       router.refresh();
     } finally {
       setLoading(false);

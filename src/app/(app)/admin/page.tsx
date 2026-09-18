@@ -47,6 +47,8 @@ interface TenantInfo {
   // безлимит, сезонная пауза. Считает сервер — см. комментарий там же.
   purgeAt: string | null;
   purgeInDays: number | null;
+  // Шаги «Первых шагов» владельца (docs/spec/13-onboarding.md).
+  setup: { doneCount: number; total: number; complete: boolean };
 }
 
 // Полный набор фильтров/сортировки (запрос пользователя 2026-07-29: "надо
@@ -499,6 +501,18 @@ export default function AdminTenantsPage() {
                         <p className="text-caption-airbnb text-muted-foreground">
                           {t.admin.registeredOnLabel} {new Date(tenant.createdAt).toLocaleDateString()}
                           {tenant.cleanupVerdict !== "active" && ` · ${tenant.ageDays} ${t.admin.cleanupAgeDays}`}
+                        </p>
+                        {/* Сколько шагов настройки прошёл владелец — чтобы
+                            застрявшему можно было написать лично
+                            (docs/spec/13-onboarding.md). Приглушённым текстом,
+                            как соседние строки: это факт, не тревога. */}
+                        <p className="text-caption-airbnb text-muted-foreground tabular-nums">
+                          {t.admin.setupLabel}{" "}
+                          {tenant.setup.complete
+                            ? t.admin.setupDone
+                            : `${t.admin.setupProgress
+                                .replace("{done}", String(tenant.setup.doneCount))
+                                .replace("{total}", String(tenant.setup.total))} · ${tenant.ageDays} ${t.admin.cleanupAgeDays}`}
                         </p>
                         {/* Дата автоудаления Free-кабинета (запрос владельца
                             2026-08-22). Обычным приглушённым текстом, как и

@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Вхід",
-    "pinJustSet": "PIN-код збережено. Тепер можна увійти за його допомогою.",
     "tabPin": "Вхід за PIN-кодом",
     "tabPassword": "Логін і пароль",
     "deviceUnknownHint": "На цьому пристрої ще не виконувався вхід. Увійдіть з логіном і паролем — після цього вхід за PIN-кодом буде доступний без email і пароля.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Батут 1",
     "demoOption30": "30 хвилин",
     "demoOption60": "60 хвилин",
-    "demoOperatorName": "Співробітник 1"
+    "demoOperatorName": "Співробітник 1",
+    "checklistTitle": "Перші кроки",
+    "checklistCounter": "{done} з {total}",
+    "checklistActionsLabel": "Дії з першими кроками",
+    "hideChecklist": "Сховати",
+    "stepPoint": "Точка",
+    "stepZone": "Зона з тарифами та активами",
+    "stepZoneOn": "Зону увімкнено",
+    "stepOperator": "Співробітник",
+    "stepDevice": "Планшет на точці",
+    "stepFirstWork": "Перша робота на точці",
+    "stepLanding": "Сторінка для клієнтів",
+    "hints": {
+      "addPoint": "Додайте точку — місце, де працює ваш прокат",
+      "activatePoint": "Увімкніть точку «{point}»: ··· → «{activatePointMenu}»",
+      "addZone": "Додайте зону в точку «{point}»",
+      "addTariff": "Додайте тариф у зону «{zone}»",
+      "addAsset": "Додайте актив у зону «{zone}»",
+      "activateAsset": "Увімкніть актив «{asset}» у зоні «{zone}»: ··· → «{activateAssetMenu}»",
+      "addTicketPrice": "Задайте ціну квитка в активу в зоні «{zone}»",
+      "activateZone": "Увімкніть зону «{zone}»: ··· → «{activateZoneMenu}»",
+      "zoneOnLater": "Коли зона буде готова, увімкніть її: ··· → «{activateZoneMenu}»",
+      "addOperator": "Додайте співробітника — він входитиме на точці за своїм ПІН-кодом",
+      "addDevice": "Прив'яжіть планшет або телефон точки: «{pointsSection}» → «{addDeviceMenu}»",
+      "firstWork": "Співробітник входить на планшеті за ПІН-кодом і починає роботу",
+      "publishLanding": "За бажанням: заповніть і опублікуйте лендинг"
+    }
   },
   "operatorGuide": {
     "navLabel": "Як працювати",

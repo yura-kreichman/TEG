@@ -602,7 +602,6 @@
   },
   "auth": {
     "loginTitle": "Autentificare",
-    "pinJustSet": "PIN-ul a fost salvat. Acum vă puteți autentifica cu el.",
     "tabPin": "Autentificare cu PIN",
     "tabPassword": "Login și parolă",
     "deviceUnknownHint": "Nu s-a făcut încă autentificare pe acest dispozitiv. Autentificați-vă cu login și parolă — după aceea, autentificarea cu PIN va fi disponibilă fără email și parolă.",
@@ -1838,7 +1837,33 @@
     "demoAssetStays": "Trambulină 1",
     "demoOption30": "30 de minute",
     "demoOption60": "60 de minute",
-    "demoOperatorName": "Angajat 1"
+    "demoOperatorName": "Angajat 1",
+    "checklistTitle": "Primii pași",
+    "checklistCounter": "{done} din {total}",
+    "checklistActionsLabel": "Acțiuni pentru primii pași",
+    "hideChecklist": "Ascunde",
+    "stepPoint": "Punct",
+    "stepZone": "Zonă cu tarife și active",
+    "stepZoneOn": "Zona este pornită",
+    "stepOperator": "Angajat",
+    "stepDevice": "Tabletă la punct",
+    "stepFirstWork": "Prima zi de lucru la punct",
+    "stepLanding": "Pagină pentru clienți",
+    "hints": {
+      "addPoint": "Adăugați un punct — locul unde funcționează închirierea",
+      "activatePoint": "Porniți punctul „{point}”: ··· → „{activatePointMenu}”",
+      "addZone": "Adăugați o zonă în punctul „{point}”",
+      "addTariff": "Adăugați un tarif în zona „{zone}”",
+      "addAsset": "Adăugați un activ în zona „{zone}”",
+      "activateAsset": "Porniți activul „{asset}” din zona „{zone}”: ··· → „{activateAssetMenu}”",
+      "addTicketPrice": "Setați prețul biletului la un activ din zona „{zone}”",
+      "activateZone": "Porniți zona „{zone}”: ··· → „{activateZoneMenu}”",
+      "zoneOnLater": "Când zona este gata, porniți-o: ··· → „{activateZoneMenu}”",
+      "addOperator": "Adăugați un angajat — se va autentifica la punct cu propriul PIN",
+      "addDevice": "Asociați tableta sau telefonul punctului: „{pointsSection}” → „{addDeviceMenu}”",
+      "firstWork": "Angajatul se autentifică pe tabletă cu PIN-ul și începe lucrul",
+      "publishLanding": "Opțional: completați și publicați pagina de prezentare"
+    }
   },
   "operatorGuide": {
     "navLabel": "Cum se lucrează",
