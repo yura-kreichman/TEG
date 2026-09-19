@@ -108,7 +108,18 @@ export async function deleteTenantEverywhere(
   // Имя читаем ДО удаления — после него сообщать будет уже нечего.
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
 
-  await prisma.tenant.delete({ where: { id: tenantId } });
+  // Пуски и прибывания — заранее и в той же транзакции. Каскадом от тенанта
+  // они не удаляются (найдено 2026-09-19: Super Admin не смог удалить park,
+  // «база отклонила из-за внешнего ключа»): у Launch кроме zoneId (Cascade)
+  // есть связи с правилом SET NULL — тариф, кошельки клиентов, сотрудники,
+  // сдача итогов. Postgres успевает удалить зону раньше, чем сам пуск, и
+  // обнуление одной из этих связей перепроверяет Launch_zoneId_fkey уже без
+  // зоны. Так не удалялся ни один тенант, у которого был хоть один пуск, — и
+  // вручную, и автоудалением.
+  await prisma.$transaction([
+    prisma.launch.deleteMany({ where: { zone: { point: { tenantId } } } }),
+    prisma.tenant.delete({ where: { id: tenantId } }),
+  ]);
 
   // Файлы (public/uploads/<tenantId>/, см. src/lib/uploads.ts) лежат на диске,
   // каскад Prisma их не трогает. Best-effort: тенант уже удалён, сиротская
