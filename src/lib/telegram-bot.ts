@@ -194,6 +194,12 @@ export async function sendChatMessage(chatId: string, text: string): Promise<Tel
   return callTelegramApi("sendMessage", { chat_id: chatId, text, parse_mode: "HTML" });
 }
 
+// Бот выходит из группы или канала — при полном удалении владельца
+// (deleteTenantEverywhere), чтобы не оставаться немым участником его чатов.
+export async function leaveChat(chatId: string): Promise<TelegramApiResult> {
+  return callTelegramApi("leaveChat", { chat_id: chatId });
+}
+
 // Фото с подписью (запрос пользователя 2026-07-23, рассылка клиентам) —
 // photoUrl передаётся Telegram'у как обычная ссылка (photo: <URL>), сам файл
 // прокачивать через наш сервер не нужно — Bot API умеет скачать его сам,

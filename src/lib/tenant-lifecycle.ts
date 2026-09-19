@@ -7,6 +7,8 @@ import { isEmailConfigured, sendEmail } from "@/lib/summary-channels/email-chann
 import { pricingUrl } from "@/lib/billing";
 import { signTenantBillingToken } from "@/lib/billing-token";
 import { notifyTenantDeleted } from "@/lib/platform-notify";
+import { leaveChat } from "@/lib/telegram-bot";
+import { getSystemSettingsConfig } from "@/lib/system-settings";
 import type { Locale } from "@/lib/locales";
 
 /**
@@ -90,8 +92,128 @@ export function purgeScheduleFor(
 }
 
 /**
- * Удаление кабинета целиком: сам тенант (каскадом уносит все связанные
- * таблицы), загруженные файлы на диске и учётная запись на маркетинговом
+ * Чаты бота, которые принадлежат только этому тенанту: клиентская группа и
+ * Telegram-каналы сводок. Чат, которым пользуется ещё кто-то — другой тенант
+ * или группа уведомлений платформы (тот же бот), — не трогаем.
+ */
+async function tenantOnlyBotChats(tenantId: string): Promise<string[]> {
+  const [group, channels] = await Promise.all([
+    prisma.tenantPublicGroup.findUnique({ where: { tenantId }, select: { chatId: true } }),
+    prisma.tenantSummaryChannel.findMany({ where: { tenantId, chatId: { not: null } }, select: { chatId: true } }),
+  ]);
+  const own = [...new Set([group?.chatId, ...channels.map((c) => c.chatId)].filter((id): id is string => !!id))];
+  if (own.length === 0) return [];
+
+  const [otherGroups, otherChannels, settings] = await Promise.all([
+    prisma.tenantPublicGroup.findMany({ where: { tenantId: { not: tenantId }, chatId: { in: own } }, select: { chatId: true } }),
+    prisma.tenantSummaryChannel.findMany({ where: { tenantId: { not: tenantId }, chatId: { in: own } }, select: { chatId: true } }),
+    getSystemSettingsConfig(),
+  ]);
+  const shared = new Set([...otherGroups, ...otherChannels].map((c) => c.chatId));
+  if (settings.adminNotifications.chatId) shared.add(settings.adminNotifications.chatId);
+  return own.filter((id) => !shared.has(id));
+}
+
+/**
+ * Все записи тенанта в базе — одной транзакцией, без внешних эффектов (бот,
+ * файлы, сайт, уведомление — это deleteTenantEverywhere). Отдельной функцией,
+ * чтобы проверять удаление на копии базы, не трогая Telegram и сайт.
+ */
+export async function deleteTenantRecords(tenantId: string): Promise<void> {
+  const [landing, publicGroup, clientLinks] = await Promise.all([
+    prisma.landing.findUnique({ where: { tenantId }, select: { id: true } }),
+    prisma.tenantPublicGroup.findUnique({ where: { tenantId }, select: { chatId: true } }),
+    prisma.clientTelegramLink.findMany({ where: { tenantId }, select: { chatId: true } }),
+  ]);
+  // Сессия бота — одна на Telegram-чат клиента и общая для всех тенантов.
+  // Удаляем её только у тех клиентов, кого этот тенант был последним.
+  const clientChats = [...new Set(clientLinks.map((l) => l.chatId))];
+  const stillLinked = new Set(
+    (
+      await prisma.clientTelegramLink.findMany({
+        where: { chatId: { in: clientChats }, tenantId: { not: tenantId } },
+        select: { chatId: true },
+      })
+    ).map((l) => l.chatId)
+  );
+  const orphanChats = clientChats.filter((chatId) => !stillLinked.has(chatId));
+
+  await prisma.$transaction([
+    // Журнал исправлений связи с тенантом не имеет (entityId — голая строка),
+    // каскад его не трогает, а в before/after лежат суммы, балансы и имена
+    // клиентов. Удаляем всё, что относится к данным этого тенанта или
+    // сделано его людьми, — до того, как исчезнут сами сущности.
+    prisma.$executeRaw`
+      DELETE FROM "CorrectionLog" c WHERE
+        (c."entityType" = 'Tenant' AND c."entityId" = ${tenantId})
+        OR c."correctedByUserId" IN (SELECT id FROM "User" WHERE "tenantId" = ${tenantId})
+        OR c."correctedByOperatorId" IN (SELECT id FROM "Operator" WHERE "tenantId" = ${tenantId})
+        OR (c."entityType" = 'MoneyOperation' AND c."entityId" IN (SELECT id FROM "MoneyOperation" WHERE "tenantId" = ${tenantId}))
+        OR (c."entityType" = 'Shift' AND c."entityId" IN (SELECT id FROM "Shift" WHERE "tenantId" = ${tenantId}))
+        OR (c."entityType" = 'AbonementWallet' AND c."entityId" IN (SELECT id FROM "AbonementWallet" WHERE "tenantId" = ${tenantId}))
+        OR (c."entityType" = 'GoodsSale' AND c."entityId" IN (SELECT id FROM "GoodsSale" WHERE "tenantId" = ${tenantId}))
+        OR (c."entityType" = 'ZoneSubmission' AND c."entityId" IN (
+          SELECT zs.id FROM "ZoneSubmission" zs JOIN "ResultsSubmission" r ON r.id = zs."resultsSubmissionId" WHERE r."tenantId" = ${tenantId}))
+        OR (c."entityType" IN ('Launch', 'TicketOrder', 'Ticket') AND c."entityId" IN (
+          SELECT l.id FROM "Launch" l JOIN "Zone" z ON z.id = l."zoneId" JOIN "Point" p ON p.id = z."pointId" WHERE p."tenantId" = ${tenantId}
+          UNION ALL
+          SELECT o.id FROM "TicketOrder" o JOIN "Zone" z ON z.id = o."zoneId" JOIN "Point" p ON p.id = z."pointId" WHERE p."tenantId" = ${tenantId}
+          UNION ALL
+          SELECT t.id FROM "Ticket" t JOIN "TicketOrder" o ON o.id = t."orderId" JOIN "Zone" z ON z.id = o."zoneId" JOIN "Point" p ON p.id = z."pointId" WHERE p."tenantId" = ${tenantId}))
+        OR (c."entityType" = 'AcknowledgmentRecord' AND c."entityId" IN (
+          SELECT a.id FROM "AcknowledgmentRecord" a JOIN "Instruction" i ON i.id = a."instructionId" WHERE i."tenantId" = ${tenantId}))
+    `,
+
+    // Записи, у которых кроме каскадной связи есть связи SET NULL, — заранее,
+    // пока живы их родители. Иначе Postgres удаляет родителя (зону, точку)
+    // раньше самой записи, а обнуление другой её связи перепроверяет уже
+    // несуществующего родителя — «база отклонила из-за внешнего ключа».
+    // Найдено 2026-09-19 на park: не удалялся ни один тенант с пусками — ни
+    // вручную, ни автоудалением. Список — все такие таблицы схемы
+    // (docs/spec/06-super-admin.md, «Удаление»); дочерние строки (оплаты
+    // частями, билеты заказа) уходят каскадом от них.
+    prisma.abonementTransaction.deleteMany({ where: { wallet: { tenantId } } }),
+    prisma.counterTapEvent.deleteMany({ where: { point: { tenantId } } }),
+    prisma.launch.deleteMany({ where: { zone: { point: { tenantId } } } }),
+    prisma.ticketOrder.deleteMany({ where: { zone: { point: { tenantId } } } }),
+    prisma.goodsSale.deleteMany({ where: { tenantId } }),
+    prisma.goodsHeldOrder.deleteMany({ where: { tenantId } }),
+    prisma.goodsReconciliation.deleteMany({ where: { tenantId } }),
+    prisma.goodsRevision.deleteMany({ where: { tenantId } }),
+    prisma.moneyOperation.deleteMany({ where: { tenantId } }),
+    prisma.asset.deleteMany({ where: { zone: { point: { tenantId } } } }),
+    prisma.landing.deleteMany({ where: { tenantId } }),
+
+    // Хранятся без связи с тенантом — каскад их не видит.
+    ...(landing ? [prisma.landingVisitorSeen.deleteMany({ where: { landingId: landing.id } })] : []),
+    prisma.webhookEvent.deleteMany({ where: { tenantId } }),
+    prisma.clientBotSession.deleteMany({ where: { chatId: { in: orphanChats } } }),
+    prisma.clientBotSession.updateMany({ where: { pendingTenantId: tenantId }, data: { pendingTenantId: null } }),
+    // Недоделанная регистрация к этому тенанту — вместе с введённым телефоном.
+    prisma.clientBotSession.updateMany({
+      where: { pendingRegistrationTenantId: tenantId },
+      data: { pendingRegistrationTenantId: null, pendingRegistrationPhone: null, awaitingRegistrationName: false },
+    }),
+    ...(publicGroup?.chatId
+      ? [
+          prisma.clientBotSession.updateMany({
+            where: { pendingWelcomeGroupChatId: publicGroup.chatId },
+            data: { pendingWelcomeGroupChatId: null, pendingWelcomeMessageId: null },
+          }),
+        ]
+      : []),
+
+    // Остальное — клиенты, абонементы, сотрудники, точки, зоны, смены,
+    // привязки к Telegram, каналы сводок, пуш-подписки — каскадом.
+    prisma.tenant.delete({ where: { id: tenantId } }),
+  ]);
+}
+
+/**
+ * Удаление кабинета целиком (решение владельца 2026-09-19: «полное
+ * удаление» — клиенты, бот, медиафайлы, всё, что связано с владельцем):
+ * сам тенант со всеми данными, журнал исправлений по его данным, выход бота
+ * из его групп, загруженные файлы на диске и учётная запись на маркетинговом
  * сайте. Одна функция на все три вызова — планировщик, массовая чистка и
  * ручное удаление из админки, — иначе «удаляется везде» разъедется по трём
  * местам при первой же правке.
@@ -105,26 +227,29 @@ export async function deleteTenantEverywhere(
   ownerEmail: string | null,
   reason: "auto" | "manual" = "auto"
 ): Promise<void> {
-  // Имя читаем ДО удаления — после него сообщать будет уже нечего.
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-
-  // Пуски и прибывания — заранее и в той же транзакции. Каскадом от тенанта
-  // они не удаляются (найдено 2026-09-19: Super Admin не смог удалить park,
-  // «база отклонила из-за внешнего ключа»): у Launch кроме zoneId (Cascade)
-  // есть связи с правилом SET NULL — тариф, кошельки клиентов, сотрудники,
-  // сдача итогов. Postgres успевает удалить зону раньше, чем сам пуск, и
-  // обнуление одной из этих связей перепроверяет Launch_zoneId_fkey уже без
-  // зоны. Так не удалялся ни один тенант, у которого был хоть один пуск, — и
-  // вручную, и автоудалением.
-  await prisma.$transaction([
-    prisma.launch.deleteMany({ where: { zone: { point: { tenantId } } } }),
-    prisma.tenant.delete({ where: { id: tenantId } }),
+  // Имя и чаты читаем ДО удаления — после него их уже не найти.
+  const [tenant, chatsToLeave] = await Promise.all([
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+    tenantOnlyBotChats(tenantId),
   ]);
 
+  await deleteTenantRecords(tenantId);
+
+  // Бот выходит из групп и каналов владельца — иначе остался бы в них немым
+  // участником. Best-effort: кабинета уже нет, а бот мог быть удалён из
+  // группы раньше.
+  for (const chatId of chatsToLeave) {
+    await leaveChat(chatId).catch((err) => console.error("bot leaveChat failed", chatId, err));
+  }
+
   // Файлы (public/uploads/<tenantId>/, см. src/lib/uploads.ts) лежат на диске,
-  // каскад Prisma их не трогает. Best-effort: тенант уже удалён, сиротская
-  // папка хуже, чем неудачная попытка её убрать.
-  await rm(path.join(process.cwd(), "public", "uploads", tenantId), { recursive: true, force: true }).catch(() => {});
+  // каскад Prisma их не трогает. Тенант уже удалён, поэтому неудача не
+  // откатывает удаление, но и молчать о ней нельзя: до 2026-09-19 ошибка
+  // глушилась, и папка park пережила его удаление незамеченной (приложение
+  // не имело прав на папку загрузок — см. SITE_UID в docker-compose.prod.yml).
+  await rm(path.join(process.cwd(), "public", "uploads", tenantId), { recursive: true, force: true }).catch((err) =>
+    console.error("tenant uploads removal failed", tenantId, err)
+  );
 
   if (ownerEmail) {
     await deleteSiteAccount(ownerEmail).catch((err) =>
