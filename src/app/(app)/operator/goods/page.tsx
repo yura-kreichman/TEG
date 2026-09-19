@@ -1620,7 +1620,7 @@ function HeldOrdersRow({
   return (
     <div
       className="fixed inset-x-4 z-10 flex items-center gap-1 rounded-control bg-card p-1.5 shadow-card-rest"
-      style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}
+      style={{ bottom: "calc(5.125rem + env(safe-area-inset-bottom))" }}
     >
       {canScrollLeft && (
         <PressableScale className="shrink-0">

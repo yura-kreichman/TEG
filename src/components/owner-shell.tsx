@@ -275,11 +275,13 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
         <Link
           href={item.href}
           className={cn(
-            "flex items-center gap-2 rounded-control px-3 py-2 text-sm font-medium transition-colors",
+            // Крупнее, чем было (text-sm, иконка 16px, py-2) — запрос владельца
+            // 2026-09-19: «слишком тонкий и маленький навбар».
+            "flex items-center gap-3 rounded-control px-3.5 py-2.5 text-[0.9375rem] font-medium transition-colors",
             active ? "bg-primary/10 text-primary" : "text-sidebar-foreground hover:bg-black/5 dark:hover:bg-white/5"
           )}
         >
-          <Icon className="size-4" />
+          <Icon className="size-5 shrink-0" />
           {item.label(t)}
         </Link>
       </PressableScale>
@@ -322,7 +324,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             "на компьютере не на всех страницах есть переключатель темы... в
             Товарах он отсутствует" — на самом деле был в DOM везде, просто вне
             видимой области на длинных страницах). */}
-        <aside className="hidden shrink-0 flex-col justify-between overflow-y-auto bg-surface-0 p-4 md:sticky md:top-0 md:flex md:h-screen md:w-56">
+        <aside className="hidden shrink-0 flex-col justify-between overflow-y-auto bg-surface-0 p-4 shadow-nav-side md:sticky md:top-0 md:z-10 md:flex md:h-screen md:w-64">
           <nav className="flex flex-col gap-1">
             {barItems.map(sidebarLink)}
             <div className="my-1 border-t border-border" />
@@ -331,7 +333,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           <ThemeToggle />
         </aside>
 
-        <div className="flex flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+        <div className="flex flex-1 flex-col pb-[calc(4.625rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
       </div>
 
       <BottomGlassNav

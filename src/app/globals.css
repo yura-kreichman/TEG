@@ -66,6 +66,8 @@
   --shadow-card-hover: var(--shadow-card-hover);
   --shadow-floating: var(--shadow-floating);
   --shadow-sheet: var(--shadow-sheet);
+  --shadow-nav: var(--shadow-nav);
+  --shadow-nav-side: var(--shadow-nav-side);
   --color-nav-glass-bg: var(--nav-glass-bg);
   --color-nav-glass-border: var(--nav-glass-border);
 }
@@ -126,6 +128,11 @@
   --shadow-card-hover: 0 6px 14px rgba(27, 31, 29, 0.12), 0 16px 36px rgba(27, 31, 29, 0.16);
   --shadow-floating: 0 8px 28px rgba(27, 31, 29, 0.16);
   --shadow-sheet: 0 -12px 40px rgba(27, 31, 29, 0.18);
+  /* Навигация (запрос владельца 2026-09-19: «навбар должен отбрасывать чуть
+     больше тень», одинаково у владельца и оператора): нижний бар — вверх,
+     сайдбар кабинета — вправо. Было 0 -1px 8px rgba(0,0,0,.06). */
+  --shadow-nav: 0 -2px 6px rgba(27, 31, 29, 0.06), 0 -8px 24px rgba(27, 31, 29, 0.1);
+  --shadow-nav-side: 2px 0 6px rgba(27, 31, 29, 0.05), 8px 0 24px rgba(27, 31, 29, 0.07);
 
   /* Нижний бар "стекло" (docs/spec/03-design-system.md, НАВИГАЦИЯ) —
      непрозрачность встроена в сам цвет через вложенный color-mix (не через
@@ -213,6 +220,8 @@
   --shadow-card-hover: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 28px rgba(0, 0, 0, 0.5);
   --shadow-floating: 0 8px 28px rgba(0, 0, 0, 0.5);
   --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.5);
+  --shadow-nav: 0 -2px 6px rgba(0, 0, 0, 0.25), 0 -8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-nav-side: 2px 0 6px rgba(0, 0, 0, 0.25), 8px 0 24px rgba(0, 0, 0, 0.3);
 
   /* Тёмная тема: не светлое стекло на тёмном фоне — базовая поверхность
      тёмная, тонированная акцентом. Спека называет базу "surface-2"; в токенах
@@ -748,7 +757,7 @@ html:has([data-tenant-logo-watermark]) {
        "холодное стекло" не читалось), с более плотной заливкой blur снова
        заметен как размытие, а не просто лёгкая тонировка. */
     box-shadow:
-      0 -1px 8px rgba(0, 0, 0, 0.06),
+      var(--shadow-nav),
       inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
   @supports not (backdrop-filter: blur(1px)) {

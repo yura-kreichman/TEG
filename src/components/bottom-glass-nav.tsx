@@ -49,6 +49,14 @@ export function BottomGlassNav({
   // остаться виден на любой ширине.
   hideOnDesktop?: boolean;
 }) {
+  // Размер один у владельца и у оператора — общий принцип (запрос владельца
+  // 2026-09-19: «слишком тонкий и маленький навбар», «у оператора
+  // синхронно»). Иконки 24px, пункт выше; подписи остаются 12px — пять
+  // пунктов в ширину телефона, а на других языках подписи длиннее русских.
+  // Высота бара — 4rem (было 3.375rem): отступы снизу у контента и у всего,
+  // что висит над баром, в обеих оболочках подняты на те же 0.625rem.
+  const itemClass = "gap-1 py-2.5 text-xs";
+  const iconClass = "size-6";
   return (
     <nav
       className={cn(
@@ -63,12 +71,12 @@ export function BottomGlassNav({
             <Link
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 py-2 text-xs",
+                "flex flex-col items-center", itemClass,
                 item.active ? "font-semibold text-primary" : "text-nav-inactive font-medium"
               )}
             >
               <span className="relative">
-                <Icon className="size-5" />
+                <Icon className={iconClass} />
                 {item.badge && (
                   <span
                     className={cn(
@@ -90,12 +98,12 @@ export function BottomGlassNav({
             type="button"
             onClick={onMoreClick}
             className={cn(
-              "flex w-full flex-col items-center gap-0.5 py-2 text-xs",
+              "flex w-full flex-col items-center", itemClass,
               moreActive ? "font-semibold text-primary" : "text-nav-inactive font-medium"
             )}
           >
             <span className="relative">
-              <MoreHorizontal className="size-5" />
+              <MoreHorizontal className={iconClass} />
               {moreBadge && (
                 <span
                   className={cn(

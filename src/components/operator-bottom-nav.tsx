@@ -332,8 +332,8 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       <div
         className={cn(
           "flex flex-1 flex-col",
-          !hidden && "pb-[calc(4rem+env(safe-area-inset-bottom))]",
-          !hidden && expiredCount > 0 && "pb-[calc(6.75rem+env(safe-area-inset-bottom))]"
+          !hidden && "pb-[calc(4.625rem+env(safe-area-inset-bottom))]",
+          !hidden && expiredCount > 0 && "pb-[calc(7.375rem+env(safe-area-inset-bottom))]"
         )}
       >
         {children}
@@ -341,7 +341,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       {!hidden && expiredCount > 0 && (
         <PressableScale
           className="fixed inset-x-0 z-40 px-3"
-          style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom))" }}
+          style={{ bottom: "calc(5.375rem + env(safe-area-inset-bottom))" }}
         >
           <button
             type="button"

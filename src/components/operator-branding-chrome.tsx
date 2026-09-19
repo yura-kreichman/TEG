@@ -84,7 +84,7 @@ export function OperatorBrandingChrome() {
     <>
       <TenantLogoWatermark logoUrl={logoUrl} />
       <BgEffectLayer effect={bgEffect} />
-      <PoweredByMark className="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 hidden md:inline-flex" />
+      <PoweredByMark className="pointer-events-none fixed bottom-[calc(5.125rem+env(safe-area-inset-bottom))] right-3 hidden md:inline-flex" />
     </>
   );
 }
