@@ -57,11 +57,18 @@ function SelectContent({
 }) {
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Positioner className="z-70 outline-none" sideOffset={6} align={align}>
+      {/* collisionPadding — окно не прилипает к краю экрана, когда из-за
+          ширины его приходится сдвигать. */}
+      <SelectPrimitive.Positioner className="z-70 outline-none" sideOffset={6} align={align} collisionPadding={16}>
         <SelectPrimitive.Popup
           data-slot="select-content"
           className={cn(
-            "max-h-[min(60vh,320px)] w-(--anchor-width) min-w-(--anchor-width) overflow-y-auto rounded-control border border-border bg-card p-1 shadow-floating",
+            // По ширине самого длинного варианта, не уже кнопки и не шире
+            // экрана (запрос владельца 2026-09-19, скриншот «Авансы и премии
+            // сотрудникам»: «Из кассы т…», «Только начисл…»). Раньше окно
+            // было ровно шириной кнопки — у кнопок по ширине значения
+            // (w-auto) все остальные варианты обрезались многоточием.
+            "max-h-[min(60vh,320px)] w-max min-w-(--anchor-width) max-w-[calc(100vw-2rem)] overflow-y-auto rounded-control border border-border bg-card p-1 shadow-floating",
             "origin-(--transform-origin) transition-[transform,opacity] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
             className
           )}
@@ -99,7 +106,9 @@ function SelectItem({ className, children, ...props }: React.ComponentProps<type
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText className="min-w-0 truncate">{children}</SelectPrimitive.ItemText>
+      {/* Перенос, а не многоточие: вариант, который не влез даже в ширину
+          экрана, дочитывается на второй строке. */}
+      <SelectPrimitive.ItemText className="min-w-0 break-words">{children}</SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator className="flex shrink-0 items-center text-primary">
         <Check className="size-4" />
       </SelectPrimitive.ItemIndicator>
