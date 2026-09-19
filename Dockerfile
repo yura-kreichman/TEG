@@ -46,6 +46,13 @@ COPY --from=build /app/src/generated ./src/generated
 # рантайму не нужен (уже скомпилирован в .next).
 COPY --from=build /app/src/lib/instructions/fonts ./src/lib/instructions/fonts
 RUN mkdir -p /app/public/uploads && chown -R rentos:rentos /app/public/uploads
+# Рантайм-кэш Next (уменьшенные картинки /_next/image и прочее). Скопирован из
+# стадии сборки под root, а на проде процесс идёт под SITE_UID из .env (uid
+# владельца папки сайта, в образе заранее не известен) — Next не мог создать
+# cache/images, каждая картинка пересчитывалась на каждый запрос
+# (x-nextjs-cache: MISS, «Failed to write image to cache», найдено 2026-09-19).
+# 1777, как у /tmp: писать может любой uid, чужие файлы удалить — нет.
+RUN mkdir -p /app/.next/cache && chmod 1777 /app/.next/cache
 USER rentos
 EXPOSE 3000
 CMD ["npm", "run", "start"]
