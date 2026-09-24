@@ -8,6 +8,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PinInput } from "@/components/pin-input";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -176,25 +177,7 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1">
               <Label htmlFor="pin">{t.auth.pinLabel}</Label>
-              {/* Не type="password" (запрос владельца 2026-09-17): на поле
-                  пароля Chrome после входа по ПИН предлагает «Обновить пароль?»
-                  для сохранённой почты — и autoComplete="off" игнорирует.
-                  ПИН — не пароль браузера. Точки даёт CSS, one-time-code
-                  менеджеры паролей не сохраняют. Так же во всех полях ПИН. */}
-              <Input
-                id="pin"
-                type="text"
-                inputMode="numeric"
-                pattern="\d{4,6}"
-                required
-                autoComplete="one-time-code"
-                data-1p-ignore
-                data-lpignore="true"
-                autoFocus
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                className="h-14 text-lg tabular-nums [-webkit-text-security:disc]"
-              />
+              <PinInput id="pin" required autoFocus value={pin} onChange={(e) => setPin(e.target.value)} />
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}

@@ -5,8 +5,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { AuthCard } from "@/components/auth-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PinInput } from "@/components/pin-input";
 import { useI18n } from "@/components/i18n-provider";
 
 export default function SetPinPage() {
@@ -82,38 +82,12 @@ export default function SetPinPage() {
 
         <div className="flex flex-col gap-1">
           <Label htmlFor="pin">{t.auth.newPinLabel}</Label>
-          {/* Не type="password" — см. поле ПИН на /login: иначе Chrome
-              предлагает сохранить ПИН как пароль аккаунта. */}
-          <Input
-            id="pin"
-            type="text"
-            inputMode="numeric"
-            pattern="\d{4,6}"
-            required
-            autoComplete="one-time-code"
-            data-1p-ignore
-            data-lpignore="true"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            className="h-14 text-lg tabular-nums [-webkit-text-security:disc]"
-          />
+          <PinInput id="pin" required value={pin} onChange={(e) => setPin(e.target.value)} />
         </div>
 
         <div className="flex flex-col gap-1">
           <Label htmlFor="confirmPin">{t.auth.confirmPinLabel}</Label>
-          <Input
-            id="confirmPin"
-            type="text"
-            inputMode="numeric"
-            pattern="\d{4,6}"
-            required
-            autoComplete="one-time-code"
-            data-1p-ignore
-            data-lpignore="true"
-            value={confirmPin}
-            onChange={(e) => setConfirmPin(e.target.value)}
-            className="h-14 text-lg tabular-nums [-webkit-text-security:disc]"
-          />
+          <PinInput id="confirmPin" required value={confirmPin} onChange={(e) => setConfirmPin(e.target.value)} />
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}

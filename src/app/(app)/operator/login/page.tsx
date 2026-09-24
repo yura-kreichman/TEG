@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PinInput } from "@/components/pin-input";
 import { ActionToast } from "@/components/action-toast";
 import { useI18n } from "@/components/i18n-provider";
 import { useActionToast } from "@/hooks/use-action-toast";
@@ -144,21 +144,13 @@ export default function OperatorLoginPage() {
               thicker border than the owner-side inputs, min 56px tap target. */}
           <div className="flex flex-col gap-1">
             <Label htmlFor="pin">{t.auth.pinLabel}</Label>
-            {/* Не type="password" — см. поле ПИН на /login: иначе Chrome
-                предлагает «Обновить пароль?». */}
-            <Input
+            <PinInput
               id="pin"
-              type="text"
-              inputMode="numeric"
-              pattern="\d{4,6}"
               required
-              autoComplete="one-time-code"
-              data-1p-ignore
-              data-lpignore="true"
               autoFocus
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              className="h-14 border-2 text-lg tabular-nums [-webkit-text-security:disc]"
+              className="border-2"
             />
           </div>
 
@@ -177,19 +169,13 @@ export default function OperatorLoginPage() {
         <form onSubmit={handleOwnerSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <Label htmlFor="owner-pin">{t.auth.pinLabel}</Label>
-            <Input
+            <PinInput
               id="owner-pin"
-              type="text"
-              inputMode="numeric"
-              pattern="\d{4,6}"
               required
-              autoComplete="one-time-code"
-              data-1p-ignore
-              data-lpignore="true"
               autoFocus
               value={ownerPin}
               onChange={(e) => setOwnerPin(e.target.value)}
-              className="h-14 border-2 text-lg tabular-nums [-webkit-text-security:disc]"
+              className="border-2"
             />
           </div>
 
