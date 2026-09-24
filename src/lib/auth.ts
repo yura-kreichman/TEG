@@ -9,10 +9,12 @@ import {
   verifySessionDetails,
   type SessionTokenDetails,
 } from "@/lib/session-crypto";
-import { DEVICE_COOKIE_MAX_AGE, OWNER_DEVICE_COOKIE } from "@/lib/device-cookies";
+import { ENDLESS_COOKIE_MAX_AGE, OWNER_DEVICE_COOKIE, SESSION_COOKIE } from "@/lib/endless-cookies";
 
-const SESSION_COOKIE = "session";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+// Бессрочно (решение владельца 2026-09-24): 400 дней с продлением при каждом
+// открытии приложения, см. lib/endless-cookies.ts. Раньше — ровно 7 дней от
+// входа, и владелец раз в неделю вылетал на экран ПИН-кода.
+const SESSION_MAX_AGE = ENDLESS_COOKIE_MAX_AGE;
 
 // Separate cookie for Super Admin (found 2026-07-10: admin login shared the
 // same "session" cookie as Owner, so logging into /admin in one tab silently
@@ -39,8 +41,8 @@ const ADMIN_SESSION_MAX_AGE = 60 * 60 * 2; // 2 hours
 // форму входа, а сам вход по-прежнему требует пароль или личный PIN; на
 // планшетах точки её не бывает вовсе, и кнопка там не появляется.
 // Прежние «10 лет» были иллюзией — браузер держит куку не дольше 400 дней;
-// бессрочность даёт продление на каждом визите, см. lib/device-cookies.ts.
-const OWNER_DEVICE_MAX_AGE = DEVICE_COOKIE_MAX_AGE;
+// бессрочность даёт продление на каждом визите, см. lib/endless-cookies.ts.
+const OWNER_DEVICE_MAX_AGE = ENDLESS_COOKIE_MAX_AGE;
 
 // Отмечает, что текущая Owner-сессия (SESSION_COOKIE) была создана через
 // Impersonate из /admin (docs/spec/06-super-admin.md, п.4), а не обычным
@@ -81,18 +83,13 @@ export async function createSession(userId: string) {
   // ходит через createSession (ставит оба cookie сама), поэтому этот сброс
   // не задевает саму имперсонацию — только обычный логин/регистрацию.
   cookieStore.delete(IMPERSONATION_COOKIE);
-  // signExpiringToken, не signToken (аудит 2026-07-27) — обычный signToken не
-  // несёт срок действия в самом значении, только в maxAge cookie: перехваченный
-  // сырой cookie (лог прокси, скриншот, бэкап устройства) оставался валидным
-  // НАВСЕГДА при прямом реплее без браузера, и сброс пароля через
-  // "Забыли пароль" не отзывал уже выданные такие токены (createSession
-  // выпускает НОВЫЙ, но подпись зависит только от userId — старый перехваченный
-  // токен для того же userId остаётся тем же самым валидным значением).
-  // Ограниченный embedded expiry не закрывает это до конца (подпись всё ещё не
-  // зависит от passwordHash), но сокращает окно эксплуатации с "навсегда" до
-  // ≤7 дней. verifySessionToken уже понимает оба формата (session-crypto.ts),
-  // поэтому уже выданные до этого фикса 2-частные cookie продолжают работать
-  // до истечения своего browser maxAge — миграция без принудительного разлогина.
+  // Срок и время выдачи зашиты в сам токен (аудит 2026-07-27, 2026-08-13):
+  // перехваченный сырой cookie (лог прокси, скриншот, бэкап устройства) при
+  // прямом реплее без браузера не должен жить вечно, а смена или сброс пароля
+  // должны его обесценивать. С 2026-09-24 сессия бессрочная (продлевается
+  // при открытии приложения, lib/endless-cookies.ts), поэтому от перехвата
+  // защищает уже не срок, а только отзыв: смена пароля ставит
+  // User.sessionsValidFrom, и продление время выдачи не трогает.
   const issuedAt = Date.now();
   const expiresAt = issuedAt + SESSION_MAX_AGE * 1000;
   cookieStore.set(

@@ -3,25 +3,23 @@ import { cookies } from "next/headers";
 import { verifySecret } from "@/lib/password-hash";
 import { prisma } from "@/lib/prisma";
 import { sessionCookieOptions, signExpiringToken, verifyExpiringToken } from "@/lib/session-crypto";
-import { DEVICE_COOKIE_MAX_AGE, POINT_DEVICE_COOKIE } from "@/lib/device-cookies";
+import { ENDLESS_COOKIE_MAX_AGE, OPERATOR_SESSION_COOKIE, POINT_DEVICE_COOKIE } from "@/lib/endless-cookies";
 
 // Two distinct cookies for the operator (point-of-sale) flow, separate from the
 // Owner/Super Admin cookies in src/lib/auth.ts:
 //
 // - POINT_DEVICE_COOKIE: set once when a "device of the point" is activated via
-//   an install link/QR (see docs/spec/00-architecture.md). Long-lived. Identifies
-//   *which point* this physical device belongs to — not a person.
+//   an install link/QR (see docs/spec/00-architecture.md). Identifies *which
+//   point* this physical device belongs to — not a person.
 // - OPERATOR_SESSION_COOKIE: set after an operator enters a correct PIN on an
-//   already-activated device. Shorter-lived, meant to be re-entered across work
-//   sessions/shift handovers ("пересменка"), and cleared explicitly when an
-//   operator is done so the next operator can enter their own PIN.
+//   already-activated device, and cleared explicitly by «Сменить сотрудника»
+//   so the next operator can enter their own PIN.
 //
-// Привязка устройства бессрочна: кука продлевается на каждом визите, см.
-// lib/device-cookies.ts (раньше жила ровно год с активации).
-const POINT_DEVICE_MAX_AGE = DEVICE_COOKIE_MAX_AGE;
-
-const OPERATOR_SESSION_COOKIE = "operator_session";
-const OPERATOR_SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours
+// Обе бессрочны: кука продлевается при каждом открытии приложения, см.
+// lib/endless-cookies.ts. Привязка раньше жила ровно год с активации, сессия
+// сотрудника — 12 часов (до 2026-09-24).
+const POINT_DEVICE_MAX_AGE = ENDLESS_COOKIE_MAX_AGE;
+const OPERATOR_SESSION_MAX_AGE = ENDLESS_COOKIE_MAX_AGE;
 
 export const INSTALL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -60,7 +58,7 @@ async function getPointDeviceId(): Promise<string | null> {
   // «не активированными», сотрудники не смогли войти, а владельцу пришлось бы
   // выпускать новые ссылки активации. Куки при этом были и остаются валидными
   // — их просто проверяли не той функцией. Формат этой куки не менялся, менять
-  // его тут нельзя: устройства активируются один раз и живут год.
+  // его тут нельзя: устройства активируются один раз и живут бессрочно.
   return verifyExpiringToken(token);
 }
 

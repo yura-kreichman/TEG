@@ -39,7 +39,7 @@ export function verifyExpiringToken(token: string): string | null {
   return readExpiringToken(token)?.id ?? null;
 }
 
-/** То же, что verifyExpiringToken, но отдаёт и срок — нужен продлению кук устройств (lib/device-cookies.ts). */
+/** То же, что verifyExpiringToken, но отдаёт и срок — нужен продлению бессрочных кук (lib/endless-cookies.ts). */
 export function readExpiringToken(token: string): { id: string; expiresAtMs: number } | null {
   const [id, expiresAtStr, signature] = token.split(".");
   if (!id || !expiresAtStr || !signature) return null;
@@ -66,6 +66,7 @@ export function readExpiringToken(token: string): { id: string; expiresAtMs: num
 export interface SessionTokenDetails {
   userId: string;
   issuedAtMs: number;
+  expiresAtMs: number;
 }
 
 export function signSessionToken(id: string, issuedAtMs: number, expiresAtMs: number): string {
@@ -89,7 +90,7 @@ export function verifySessionDetails(token: string): SessionTokenDetails | null 
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
-  return { userId: id, issuedAtMs };
+  return { userId: id, issuedAtMs, expiresAtMs };
 }
 
 // Только userId — для proxy.ts, который читает cookie напрямую (гейт подписки)

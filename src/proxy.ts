@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server
 import { buildCsp, NONCE_HEADER } from "@/lib/csp";
 import { getSubscriptionGateState } from "@/lib/subscription-gate";
 import { verifySessionToken } from "@/lib/session-crypto";
-import { renewDeviceCookies } from "@/lib/device-cookies";
+import { renewEndlessCookies, SESSION_COOKIE } from "@/lib/endless-cookies";
 import { prisma } from "@/lib/prisma";
 import { resolveTenantBySlug } from "@/lib/landing/resolve-tenant";
 import { isBotUserAgent, recordLandingVisit, pruneOldVisitorHashes } from "@/lib/landing/stats";
@@ -128,9 +128,8 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const withCsp = (response: NextResponse) => {
     response.headers.set("Content-Security-Policy", csp);
     setRobotsTag(request, response);
-    // Бессрочная привязка устройств — см. lib/device-cookies.ts. Только
-    // читающие запросы: куки привязки выдают и удаляют POST-роуты.
-    if (request.method === "GET" || request.method === "HEAD") renewDeviceCookies(request, response);
+    // Бессрочные привязка устройств и сессии — см. lib/endless-cookies.ts.
+    renewEndlessCookies(request, response);
     return response;
   };
 
@@ -242,7 +241,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const isMutating = request.method !== "GET" && request.method !== "HEAD";
   const isExempt = SUBSCRIPTION_GATE_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   if (isMutating && !isExempt) {
-    const token = request.cookies.get("session")?.value;
+    const token = request.cookies.get(SESSION_COOKIE)?.value;
     // verifySessionToken, не голый verifyToken — сессия имперсонации
     // (startImpersonation, lib/auth.ts) несёт другой, self-expiring формат
     // токена; голый verifyToken не распознавал бы её вовсе, из-за чего этот
