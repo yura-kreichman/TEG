@@ -115,6 +115,10 @@ function rentos_hab_swap( $items, $args ) {
 			if ( 1180 === (int) $item->ID ) {
 				$item->url    = rentos_hab_login_url();
 				$item->target = '';
+				// Адрес у кнопки свой на каждой странице (?rentos_sso=start&to=…), и Google
+				// собирал их сотнями в «Заблокировано в robots.txt». Сам адрес закрыт
+				// в robots.txt, nofollow просто не даёт его находить.
+				$item->xfn    = 'nofollow';
 			}
 		}
 
