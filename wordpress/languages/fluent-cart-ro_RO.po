@@ -1,15 +1,13 @@
 msgid ""
 msgstr ""
-"MIME-Version: 1.0
-"
-"Content-Type: text/plain; charset=UTF-8
-"
-"Content-Transfer-Encoding: 8bit
-"
-"Language: ro_RO
-"
-"X-Generator: RentOS manual
-"
+"Project-Id-Version: fluent-cart (RentOS)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ro_RO\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < 20)) ? 1 : 2);\n"
+"X-Generator: RentOS manual\n"
+"X-Domain: fluent-cart\n"
 
 msgid "Search products"
 msgstr "Caută produse"
@@ -142,3 +140,379 @@ msgstr "șase luni"
 
 msgid "until cancel"
 msgstr "până la anulare"
+
+msgid "%1$s field is required."
+msgstr "Câmpul %1$s este obligatoriu."
+
+msgid "%s is invalid, please use a valid email."
+msgstr "%s nu este valid, folosiți o adresă de email validă."
+
+msgid "Applied Successfully"
+msgstr "Aplicat"
+
+msgid "Are you sure you want to remove VAT?"
+msgstr "Sigur doriți să eliminați TVA?"
+
+msgid "Could not remove VAT, please try again."
+msgstr "Nu s-a putut elimina TVA, încercați din nou."
+
+msgid "Coupon cannot be applied"
+msgstr "Cuponul nu poate fi aplicat"
+
+msgid "Coupon removed!"
+msgstr "Cupon eliminat!"
+
+msgid "Error! Please update cart items!"
+msgstr "Eroare! Actualizați produsele din coș!"
+
+msgid "Failed to remove VAT"
+msgstr "Eliminarea TVA a eșuat"
+
+msgid "Invalid VAT number"
+msgstr "Cod TVA invalid"
+
+msgid "Label must not exceed 15 characters."
+msgstr "Eticheta nu poate depăși 15 caractere."
+
+msgid "Loading..."
+msgstr "Se încarcă…"
+
+msgid "Login failed."
+msgstr "Autentificare eșuată."
+
+msgid "Login failed. Please try again."
+msgstr "Autentificare eșuată. Încercați din nou."
+
+msgid "Login successful"
+msgstr "Autentificare reușită"
+
+msgid "Modal checkout is not available. Please try again."
+msgstr "Finalizarea comenzii în fereastră nu este disponibilă. Încercați din nou."
+
+msgid "Network error occurred"
+msgstr "A apărut o eroare de rețea"
+
+msgid "Order Processing..."
+msgstr "Se procesează comanda…"
+
+msgid "Password is required"
+msgstr "Parola este obligatorie"
+
+msgid "Place Order"
+msgstr "Plasează comanda"
+
+msgid "Please wait..."
+msgstr "Vă rugăm să așteptați…"
+
+msgid "Processing"
+msgstr "În procesare"
+
+msgid "Processing Order..."
+msgstr "Se procesează comanda…"
+
+msgid "Redirecting please wait..."
+msgstr "Redirecționare, vă rugăm să așteptați…"
+
+msgid "Redirecting..."
+msgstr "Redirecționare…"
+
+msgid "Register"
+msgstr "Înregistrare"
+
+msgid "Security check failed. Please refresh the page and try again."
+msgstr "Verificarea de securitate a eșuat. Reîmprospătați pagina și încercați din nou."
+
+msgid "Select %s"
+msgstr "Selectați %s"
+
+msgid "Select a Country"
+msgstr "Selectați o țară"
+
+msgid "Something went wrong"
+msgstr "Ceva nu a mers bine"
+
+msgid "Submit"
+msgstr "Trimite"
+
+msgid "Username or Email is required"
+msgstr "Numele de utilizator sau emailul este obligatoriu"
+
+msgid "Validating..."
+msgstr "Se validează…"
+
+msgid "Validation Error! Please fill required fields!"
+msgstr "Eroare de validare! Completați câmpurile obligatorii!"
+
+msgid "Validation service unavailable. Please try again."
+msgstr "Serviciul de validare nu este disponibil. Încercați din nou."
+
+msgid "Payment"
+msgstr "Plată"
+
+msgid "Choose any option to continue"
+msgstr "Alegeți o opțiune pentru a continua"
+
+msgid "Order Summary"
+msgstr "Rezumatul comenzii"
+
+msgid "Order summary"
+msgstr "Rezumatul comenzii"
+
+msgid "Payment information"
+msgstr "Informații de plată"
+
+msgid "Subtotal"
+msgstr "Subtotal"
+
+msgid "Have a Coupon?"
+msgstr "Aveți un cupon?"
+
+msgid "Checkout Form"
+msgstr "Formular de finalizare a comenzii"
+
+msgid "Name"
+msgstr "Nume"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "View details for %s"
+msgstr "Detalii pentru %s"
+
+msgid "Variant"
+msgstr "Variantă"
+
+msgid "Price information"
+msgstr "Informații despre preț"
+
+msgid "Total price"
+msgstr "Preț total"
+
+msgid "Coupon entry area"
+msgstr "Câmpul pentru cupon"
+
+msgid "Apply Here"
+msgstr "Aplicați"
+
+msgid "Apply"
+msgstr "Aplicați"
+
+msgid "Checkout Page"
+msgstr "Pagina de finalizare a comenzii"
+
+msgid "Close checkout"
+msgstr "Închideți finalizarea comenzii"
+
+msgid "My Reviews"
+msgstr "Recenziile mele"
+
+msgid "Logout"
+msgstr "Deconectare"
+
+msgid "Paid"
+msgstr "Plătit"
+
+msgid "Succeeded"
+msgstr "Reușit"
+
+msgid "Subscription"
+msgstr "Abonament"
+
+msgid "Pending"
+msgstr "În așteptare"
+
+msgid "Canceled"
+msgstr "Anulat"
+
+msgid "Failed"
+msgstr "Eșuat"
+
+msgid "Refunded"
+msgstr "Rambursat"
+
+msgid "Expired"
+msgstr "Expirat"
+
+msgid "Trialing"
+msgstr "Perioadă de probă"
+
+msgid "On Hold"
+msgstr "Suspendat"
+
+msgid "Renewal"
+msgstr "Reînnoire"
+
+msgid "Paused"
+msgstr "Întrerupt"
+
+msgid "Unpaid"
+msgstr "Neplătit"
+
+msgid "Partially Paid"
+msgstr "Plătit parțial"
+
+msgid "Scheduled"
+msgstr "Programat"
+
+msgid "Customer profile"
+msgstr "Profilul clientului"
+
+msgid "Customer Dashboard"
+msgstr "Contul clientului"
+
+msgid "Toggle navigation menu"
+msgstr "Deschideți sau închideți meniul"
+
+msgid "View all purchases"
+msgstr "Vedeți toate achizițiile"
+
+msgid "Order summary for order number %s"
+msgstr "Rezumatul comenzii %s"
+
+msgid "View order"
+msgstr "Deschideți comanda"
+
+msgid "Customer order history"
+msgstr "Istoricul comenzilor"
+
+msgid "View single item for this order"
+msgstr "Produsul din această comandă"
+
+msgid "Open search"
+msgstr "Deschideți căutarea"
+
+msgid "Subscription plans table"
+msgstr "Tabelul planurilor de abonament"
+
+msgid "Payment method information"
+msgstr "Metoda de plată"
+
+msgid "Subscription pagination"
+msgstr "Paginile abonamentelor"
+
+msgid "To Be Reviewed"
+msgstr "De evaluat"
+
+msgid "To Be Reviewed (%1$s)"
+msgstr "De evaluat (%1$s)"
+
+msgid "History"
+msgstr "Istoric"
+
+msgid "History (%1$s)"
+msgstr "Istoric (%1$s)"
+
+msgid "Purchased on %1$s"
+msgstr "Cumpărat pe %1$s"
+
+msgid "Write a Review"
+msgstr "Scrieți o recenzie"
+
+msgid "Write a review for"
+msgstr "Scrieți o recenzie pentru"
+
+msgid "No reviews yet"
+msgstr "Încă nu există recenzii"
+
+msgid "Reviews you write will be shown here!"
+msgstr "Aici vor apărea recenziile dvs.!"
+
+msgid "Products you purchase will wait here for your review!"
+msgstr "Aici vor apărea produsele cumpărate pe care le puteți evalua!"
+
+msgid "Nothing to review"
+msgstr "Nimic de evaluat"
+
+msgid "Reviewed %1$s"
+msgstr "Evaluat pe %1$s"
+
+msgid "Edit your review of"
+msgstr "Editați recenzia pentru"
+
+msgid "First Name"
+msgstr "Prenume"
+
+msgid "Last Name"
+msgstr "Nume"
+
+msgid "Address options"
+msgstr "Opțiuni adresă"
+
+msgid "Add new billing address"
+msgstr "Adăugați o adresă de facturare"
+
+msgid "Add new shipping address"
+msgstr "Adăugați o adresă de livrare"
+
+msgid "No %1$s address found, please add a new address."
+msgstr "Nu ați adăugat încă o adresă. Adăugați o adresă nouă."
+
+msgid "Edit Billing Address"
+msgstr "Editați adresa de facturare"
+
+msgid "Order Details"
+msgstr "Detaliile comenzii"
+
+msgid "Summary"
+msgstr "Rezumat"
+
+msgid "Subscription Plan"
+msgstr "Planul abonamentului"
+
+msgid "Related Transactions"
+msgstr "Tranzacții asociate"
+
+msgid "Date"
+msgstr "Data"
+
+msgid "Type"
+msgstr "Tip"
+
+msgid "Payment Method"
+msgstr "Metoda de plată"
+
+msgid "Receipt"
+msgstr "Chitanță"
+
+msgid "Order addresses"
+msgstr "Adresele comenzii"
+
+msgid "Moldova"
+msgstr "Moldova"
+
+msgid "Breadcrumb navigation"
+msgstr "Traseu de navigare"
+
+msgid "Breadcrumb"
+msgstr "Traseu"
+
+msgid "Order status information"
+msgstr "Starea comenzii"
+
+msgid "Subtotal for this item"
+msgstr "Subtotalul produsului"
+
+msgid "Transactions Table"
+msgstr "Tabelul tranzacțiilor"
+
+msgid "Invoice Number"
+msgstr "Numărul facturii"
+
+msgid "Order Type"
+msgstr "Tipul comenzii"
+
+msgid "Download Receipt for Invoice"
+msgstr "Descărcați chitanța facturii"
+
+msgid "More Actions"
+msgstr "Mai multe acțiuni"
+
+msgid "Your purchases will be shown here!"
+msgstr "Aici vor apărea achizițiile dvs.!"
+
+msgid "No purchases yet"
+msgstr "Încă nu există achiziții"
+
+msgid "Back to Shopping Now"
+msgstr "Înapoi la cumpărături"
+

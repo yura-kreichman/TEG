@@ -1,15 +1,13 @@
 msgid ""
 msgstr ""
-"MIME-Version: 1.0
-"
-"Content-Type: text/plain; charset=UTF-8
-"
-"Content-Transfer-Encoding: 8bit
-"
-"Language: it_IT
-"
-"X-Generator: RentOS manual
-"
+"Project-Id-Version: fluent-cart (RentOS)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: it_IT\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: RentOS manual\n"
+"X-Domain: fluent-cart\n"
 
 msgid "Search products"
 msgstr "Cerca prodotti"
@@ -142,3 +140,379 @@ msgstr "sei mesi"
 
 msgid "until cancel"
 msgstr "fino alla disdetta"
+
+msgid "%1$s field is required."
+msgstr "Il campo %1$s è obbligatorio."
+
+msgid "%s is invalid, please use a valid email."
+msgstr "%s non è valido, usa un indirizzo email valido."
+
+msgid "Applied Successfully"
+msgstr "Applicato"
+
+msgid "Are you sure you want to remove VAT?"
+msgstr "Vuoi davvero rimuovere l'IVA?"
+
+msgid "Could not remove VAT, please try again."
+msgstr "Impossibile rimuovere l'IVA, riprova."
+
+msgid "Coupon cannot be applied"
+msgstr "Il coupon non può essere applicato"
+
+msgid "Coupon removed!"
+msgstr "Coupon rimosso!"
+
+msgid "Error! Please update cart items!"
+msgstr "Errore! Aggiorna gli articoli nel carrello!"
+
+msgid "Failed to remove VAT"
+msgstr "Rimozione dell'IVA non riuscita"
+
+msgid "Invalid VAT number"
+msgstr "Partita IVA non valida"
+
+msgid "Label must not exceed 15 characters."
+msgstr "L'etichetta non deve superare 15 caratteri."
+
+msgid "Loading..."
+msgstr "Caricamento…"
+
+msgid "Login failed."
+msgstr "Accesso non riuscito."
+
+msgid "Login failed. Please try again."
+msgstr "Accesso non riuscito. Riprova."
+
+msgid "Login successful"
+msgstr "Accesso effettuato"
+
+msgid "Modal checkout is not available. Please try again."
+msgstr "Il checkout in finestra non è disponibile. Riprova."
+
+msgid "Network error occurred"
+msgstr "Errore di rete"
+
+msgid "Order Processing..."
+msgstr "Elaborazione dell'ordine…"
+
+msgid "Password is required"
+msgstr "La password è obbligatoria"
+
+msgid "Place Order"
+msgstr "Effettua l'ordine"
+
+msgid "Please wait..."
+msgstr "Attendere…"
+
+msgid "Processing"
+msgstr "In elaborazione"
+
+msgid "Processing Order..."
+msgstr "Elaborazione dell'ordine…"
+
+msgid "Redirecting please wait..."
+msgstr "Reindirizzamento, attendere…"
+
+msgid "Redirecting..."
+msgstr "Reindirizzamento…"
+
+msgid "Register"
+msgstr "Registrati"
+
+msgid "Security check failed. Please refresh the page and try again."
+msgstr "Controllo di sicurezza non superato. Aggiorna la pagina e riprova."
+
+msgid "Select %s"
+msgstr "Seleziona %s"
+
+msgid "Select a Country"
+msgstr "Seleziona un paese"
+
+msgid "Something went wrong"
+msgstr "Qualcosa è andato storto"
+
+msgid "Submit"
+msgstr "Invia"
+
+msgid "Username or Email is required"
+msgstr "Nome utente o email obbligatori"
+
+msgid "Validating..."
+msgstr "Verifica in corso…"
+
+msgid "Validation Error! Please fill required fields!"
+msgstr "Errore di convalida! Compila i campi obbligatori!"
+
+msgid "Validation service unavailable. Please try again."
+msgstr "Servizio di verifica non disponibile. Riprova."
+
+msgid "Payment"
+msgstr "Pagamento"
+
+msgid "Choose any option to continue"
+msgstr "Scegli un'opzione per continuare"
+
+msgid "Order Summary"
+msgstr "Riepilogo dell'ordine"
+
+msgid "Order summary"
+msgstr "Riepilogo dell'ordine"
+
+msgid "Payment information"
+msgstr "Informazioni di pagamento"
+
+msgid "Subtotal"
+msgstr "Subtotale"
+
+msgid "Have a Coupon?"
+msgstr "Hai un coupon?"
+
+msgid "Checkout Form"
+msgstr "Modulo di pagamento"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "View details for %s"
+msgstr "Dettagli di %s"
+
+msgid "Variant"
+msgstr "Variante"
+
+msgid "Price information"
+msgstr "Informazioni sul prezzo"
+
+msgid "Total price"
+msgstr "Prezzo totale"
+
+msgid "Coupon entry area"
+msgstr "Campo del coupon"
+
+msgid "Apply Here"
+msgstr "Applica"
+
+msgid "Apply"
+msgstr "Applica"
+
+msgid "Checkout Page"
+msgstr "Pagina di pagamento"
+
+msgid "Close checkout"
+msgstr "Chiudi il pagamento"
+
+msgid "My Reviews"
+msgstr "Le mie recensioni"
+
+msgid "Logout"
+msgstr "Esci"
+
+msgid "Paid"
+msgstr "Pagato"
+
+msgid "Succeeded"
+msgstr "Riuscito"
+
+msgid "Subscription"
+msgstr "Abbonamento"
+
+msgid "Pending"
+msgstr "In attesa"
+
+msgid "Canceled"
+msgstr "Annullato"
+
+msgid "Failed"
+msgstr "Non riuscito"
+
+msgid "Refunded"
+msgstr "Rimborsato"
+
+msgid "Expired"
+msgstr "Scaduto"
+
+msgid "Trialing"
+msgstr "In prova"
+
+msgid "On Hold"
+msgstr "In sospeso"
+
+msgid "Renewal"
+msgstr "Rinnovo"
+
+msgid "Paused"
+msgstr "In pausa"
+
+msgid "Unpaid"
+msgstr "Non pagato"
+
+msgid "Partially Paid"
+msgstr "Pagato in parte"
+
+msgid "Scheduled"
+msgstr "Programmato"
+
+msgid "Customer profile"
+msgstr "Profilo cliente"
+
+msgid "Customer Dashboard"
+msgstr "Area cliente"
+
+msgid "Toggle navigation menu"
+msgstr "Apri o chiudi il menu"
+
+msgid "View all purchases"
+msgstr "Vedi tutti gli acquisti"
+
+msgid "Order summary for order number %s"
+msgstr "Riepilogo dell'ordine %s"
+
+msgid "View order"
+msgstr "Apri l'ordine"
+
+msgid "Customer order history"
+msgstr "Storico degli ordini"
+
+msgid "View single item for this order"
+msgstr "Articolo di questo ordine"
+
+msgid "Open search"
+msgstr "Apri la ricerca"
+
+msgid "Subscription plans table"
+msgstr "Tabella dei piani di abbonamento"
+
+msgid "Payment method information"
+msgstr "Metodo di pagamento"
+
+msgid "Subscription pagination"
+msgstr "Pagine degli abbonamenti"
+
+msgid "To Be Reviewed"
+msgstr "Da recensire"
+
+msgid "To Be Reviewed (%1$s)"
+msgstr "Da recensire (%1$s)"
+
+msgid "History"
+msgstr "Cronologia"
+
+msgid "History (%1$s)"
+msgstr "Cronologia (%1$s)"
+
+msgid "Purchased on %1$s"
+msgstr "Acquistato il %1$s"
+
+msgid "Write a Review"
+msgstr "Scrivi una recensione"
+
+msgid "Write a review for"
+msgstr "Scrivi una recensione per"
+
+msgid "No reviews yet"
+msgstr "Ancora nessuna recensione"
+
+msgid "Reviews you write will be shown here!"
+msgstr "Qui troverai le recensioni che scrivi!"
+
+msgid "Products you purchase will wait here for your review!"
+msgstr "Qui troverai i prodotti acquistati da recensire!"
+
+msgid "Nothing to review"
+msgstr "Niente da recensire"
+
+msgid "Reviewed %1$s"
+msgstr "Recensito il %1$s"
+
+msgid "Edit your review of"
+msgstr "Modifica la recensione di"
+
+msgid "First Name"
+msgstr "Nome"
+
+msgid "Last Name"
+msgstr "Cognome"
+
+msgid "Address options"
+msgstr "Opzioni indirizzo"
+
+msgid "Add new billing address"
+msgstr "Aggiungi indirizzo di fatturazione"
+
+msgid "Add new shipping address"
+msgstr "Aggiungi indirizzo di spedizione"
+
+msgid "No %1$s address found, please add a new address."
+msgstr "Nessun indirizzo ancora. Aggiungi un nuovo indirizzo."
+
+msgid "Edit Billing Address"
+msgstr "Modifica indirizzo di fatturazione"
+
+msgid "Order Details"
+msgstr "Dettagli dell'ordine"
+
+msgid "Summary"
+msgstr "Riepilogo"
+
+msgid "Subscription Plan"
+msgstr "Piano di abbonamento"
+
+msgid "Related Transactions"
+msgstr "Transazioni collegate"
+
+msgid "Date"
+msgstr "Data"
+
+msgid "Type"
+msgstr "Tipo"
+
+msgid "Payment Method"
+msgstr "Metodo di pagamento"
+
+msgid "Receipt"
+msgstr "Ricevuta"
+
+msgid "Order addresses"
+msgstr "Indirizzi dell'ordine"
+
+msgid "Moldova"
+msgstr "Moldavia"
+
+msgid "Breadcrumb navigation"
+msgstr "Percorso di navigazione"
+
+msgid "Breadcrumb"
+msgstr "Percorso"
+
+msgid "Order status information"
+msgstr "Stato dell'ordine"
+
+msgid "Subtotal for this item"
+msgstr "Subtotale dell'articolo"
+
+msgid "Transactions Table"
+msgstr "Tabella delle transazioni"
+
+msgid "Invoice Number"
+msgstr "Numero fattura"
+
+msgid "Order Type"
+msgstr "Tipo di ordine"
+
+msgid "Download Receipt for Invoice"
+msgstr "Scarica la ricevuta della fattura"
+
+msgid "More Actions"
+msgstr "Altre azioni"
+
+msgid "Your purchases will be shown here!"
+msgstr "Qui troverai i tuoi acquisti!"
+
+msgid "No purchases yet"
+msgstr "Ancora nessun acquisto"
+
+msgid "Back to Shopping Now"
+msgstr "Torna agli acquisti"
+

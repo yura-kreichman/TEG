@@ -1,15 +1,13 @@
 msgid ""
 msgstr ""
-"MIME-Version: 1.0
-"
-"Content-Type: text/plain; charset=UTF-8
-"
-"Content-Transfer-Encoding: 8bit
-"
-"Language: uk
-"
-"X-Generator: RentOS manual
-"
+"Project-Id-Version: fluent-cart (RentOS)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: RentOS manual\n"
+"X-Domain: fluent-cart\n"
 
 msgid "Search products"
 msgstr "Пошук товарів"
@@ -142,3 +140,379 @@ msgstr "півроку"
 
 msgid "until cancel"
 msgstr "до скасування"
+
+msgid "%1$s field is required."
+msgstr "Поле «%1$s» обов'язкове."
+
+msgid "%s is invalid, please use a valid email."
+msgstr "%s некоректна, вкажіть дійсну адресу пошти."
+
+msgid "Applied Successfully"
+msgstr "Застосовано"
+
+msgid "Are you sure you want to remove VAT?"
+msgstr "Точно прибрати ПДВ?"
+
+msgid "Could not remove VAT, please try again."
+msgstr "Не вдалося прибрати ПДВ, спробуйте ще раз."
+
+msgid "Coupon cannot be applied"
+msgstr "Купон не можна застосувати"
+
+msgid "Coupon removed!"
+msgstr "Купон прибрано!"
+
+msgid "Error! Please update cart items!"
+msgstr "Помилка! Оновіть товари в кошику!"
+
+msgid "Failed to remove VAT"
+msgstr "Не вдалося прибрати ПДВ"
+
+msgid "Invalid VAT number"
+msgstr "Недійсний номер ПДВ"
+
+msgid "Label must not exceed 15 characters."
+msgstr "Назва не довша за 15 символів."
+
+msgid "Loading..."
+msgstr "Завантаження…"
+
+msgid "Login failed."
+msgstr "Не вдалося увійти."
+
+msgid "Login failed. Please try again."
+msgstr "Не вдалося увійти. Спробуйте ще раз."
+
+msgid "Login successful"
+msgstr "Вхід виконано"
+
+msgid "Modal checkout is not available. Please try again."
+msgstr "Оформлення у вікні недоступне. Спробуйте ще раз."
+
+msgid "Network error occurred"
+msgstr "Помилка мережі"
+
+msgid "Order Processing..."
+msgstr "Обробляємо замовлення…"
+
+msgid "Password is required"
+msgstr "Потрібен пароль"
+
+msgid "Place Order"
+msgstr "Оформити замовлення"
+
+msgid "Please wait..."
+msgstr "Зачекайте…"
+
+msgid "Processing"
+msgstr "Обробка"
+
+msgid "Processing Order..."
+msgstr "Обробляємо замовлення…"
+
+msgid "Redirecting please wait..."
+msgstr "Переходимо, зачекайте…"
+
+msgid "Redirecting..."
+msgstr "Переходимо…"
+
+msgid "Register"
+msgstr "Зареєструватися"
+
+msgid "Security check failed. Please refresh the page and try again."
+msgstr "Перевірка безпеки не пройдена. Оновіть сторінку й спробуйте ще раз."
+
+msgid "Select %s"
+msgstr "Оберіть %s"
+
+msgid "Select a Country"
+msgstr "Оберіть країну"
+
+msgid "Something went wrong"
+msgstr "Щось пішло не так"
+
+msgid "Submit"
+msgstr "Надіслати"
+
+msgid "Username or Email is required"
+msgstr "Потрібне ім'я користувача або пошта"
+
+msgid "Validating..."
+msgstr "Перевіряємо…"
+
+msgid "Validation Error! Please fill required fields!"
+msgstr "Помилка перевірки! Заповніть обов'язкові поля!"
+
+msgid "Validation service unavailable. Please try again."
+msgstr "Сервіс перевірки недоступний. Спробуйте ще раз."
+
+msgid "Payment"
+msgstr "Оплата"
+
+msgid "Choose any option to continue"
+msgstr "Оберіть варіант, щоб продовжити"
+
+msgid "Order Summary"
+msgstr "Підсумок замовлення"
+
+msgid "Order summary"
+msgstr "Підсумок замовлення"
+
+msgid "Payment information"
+msgstr "Платіжна інформація"
+
+msgid "Subtotal"
+msgstr "Проміжний підсумок"
+
+msgid "Have a Coupon?"
+msgstr "Маєте купон?"
+
+msgid "Checkout Form"
+msgstr "Форма оформлення замовлення"
+
+msgid "Name"
+msgstr "Ім'я"
+
+msgid "Email"
+msgstr "Ел. пошта"
+
+msgid "View details for %s"
+msgstr "Докладніше про %s"
+
+msgid "Variant"
+msgstr "Варіант"
+
+msgid "Price information"
+msgstr "Інформація про ціну"
+
+msgid "Total price"
+msgstr "Загальна ціна"
+
+msgid "Coupon entry area"
+msgstr "Поле для купона"
+
+msgid "Apply Here"
+msgstr "Застосувати"
+
+msgid "Apply"
+msgstr "Застосувати"
+
+msgid "Checkout Page"
+msgstr "Сторінка оформлення замовлення"
+
+msgid "Close checkout"
+msgstr "Закрити оформлення"
+
+msgid "My Reviews"
+msgstr "Мої відгуки"
+
+msgid "Logout"
+msgstr "Вийти"
+
+msgid "Paid"
+msgstr "Оплачено"
+
+msgid "Succeeded"
+msgstr "Успішно"
+
+msgid "Subscription"
+msgstr "Підписка"
+
+msgid "Pending"
+msgstr "Очікує"
+
+msgid "Canceled"
+msgstr "Скасовано"
+
+msgid "Failed"
+msgstr "Не вдалося"
+
+msgid "Refunded"
+msgstr "Повернено"
+
+msgid "Expired"
+msgstr "Закінчилася"
+
+msgid "Trialing"
+msgstr "Пробний період"
+
+msgid "On Hold"
+msgstr "Призупинено"
+
+msgid "Renewal"
+msgstr "Продовження"
+
+msgid "Paused"
+msgstr "Призупинено"
+
+msgid "Unpaid"
+msgstr "Не оплачено"
+
+msgid "Partially Paid"
+msgstr "Частково оплачено"
+
+msgid "Scheduled"
+msgstr "Заплановано"
+
+msgid "Customer profile"
+msgstr "Профіль клієнта"
+
+msgid "Customer Dashboard"
+msgstr "Кабінет клієнта"
+
+msgid "Toggle navigation menu"
+msgstr "Показати або сховати меню"
+
+msgid "View all purchases"
+msgstr "Усі покупки"
+
+msgid "Order summary for order number %s"
+msgstr "Підсумок замовлення %s"
+
+msgid "View order"
+msgstr "Відкрити замовлення"
+
+msgid "Customer order history"
+msgstr "Історія замовлень"
+
+msgid "View single item for this order"
+msgstr "Товар цього замовлення"
+
+msgid "Open search"
+msgstr "Відкрити пошук"
+
+msgid "Subscription plans table"
+msgstr "Таблиця тарифів підписки"
+
+msgid "Payment method information"
+msgstr "Спосіб оплати"
+
+msgid "Subscription pagination"
+msgstr "Сторінки підписок"
+
+msgid "To Be Reviewed"
+msgstr "Чекають відгуку"
+
+msgid "To Be Reviewed (%1$s)"
+msgstr "Чекають відгуку (%1$s)"
+
+msgid "History"
+msgstr "Історія"
+
+msgid "History (%1$s)"
+msgstr "Історія (%1$s)"
+
+msgid "Purchased on %1$s"
+msgstr "Куплено %1$s"
+
+msgid "Write a Review"
+msgstr "Написати відгук"
+
+msgid "Write a review for"
+msgstr "Написати відгук про"
+
+msgid "No reviews yet"
+msgstr "Відгуків поки немає"
+
+msgid "Reviews you write will be shown here!"
+msgstr "Тут з'являться ваші відгуки!"
+
+msgid "Products you purchase will wait here for your review!"
+msgstr "Тут з'являться куплені товари, які можна оцінити!"
+
+msgid "Nothing to review"
+msgstr "Нічого оцінювати"
+
+msgid "Reviewed %1$s"
+msgstr "Відгук залишено %1$s"
+
+msgid "Edit your review of"
+msgstr "Змінити відгук про"
+
+msgid "First Name"
+msgstr "Ім'я"
+
+msgid "Last Name"
+msgstr "Прізвище"
+
+msgid "Address options"
+msgstr "Дії з адресою"
+
+msgid "Add new billing address"
+msgstr "Додати адресу для рахунків"
+
+msgid "Add new shipping address"
+msgstr "Додати адресу доставки"
+
+msgid "No %1$s address found, please add a new address."
+msgstr "Адресу ще не додано. Додайте нову адресу."
+
+msgid "Edit Billing Address"
+msgstr "Змінити адресу для рахунків"
+
+msgid "Order Details"
+msgstr "Деталі замовлення"
+
+msgid "Summary"
+msgstr "Підсумок"
+
+msgid "Subscription Plan"
+msgstr "Тариф підписки"
+
+msgid "Related Transactions"
+msgstr "Пов'язані транзакції"
+
+msgid "Date"
+msgstr "Дата"
+
+msgid "Type"
+msgstr "Тип"
+
+msgid "Payment Method"
+msgstr "Спосіб оплати"
+
+msgid "Receipt"
+msgstr "Квитанція"
+
+msgid "Order addresses"
+msgstr "Адреси замовлення"
+
+msgid "Moldova"
+msgstr "Молдова"
+
+msgid "Breadcrumb navigation"
+msgstr "Навігаційний ланцюжок"
+
+msgid "Breadcrumb"
+msgstr "Навігаційний ланцюжок"
+
+msgid "Order status information"
+msgstr "Статус замовлення"
+
+msgid "Subtotal for this item"
+msgstr "Проміжний підсумок за позицію"
+
+msgid "Transactions Table"
+msgstr "Таблиця транзакцій"
+
+msgid "Invoice Number"
+msgstr "Номер рахунку"
+
+msgid "Order Type"
+msgstr "Тип замовлення"
+
+msgid "Download Receipt for Invoice"
+msgstr "Завантажити квитанцію до рахунку"
+
+msgid "More Actions"
+msgstr "Інші дії"
+
+msgid "Your purchases will be shown here!"
+msgstr "Тут з'являться ваші покупки!"
+
+msgid "No purchases yet"
+msgstr "Покупок поки немає"
+
+msgid "Back to Shopping Now"
+msgstr "Повернутися до покупок"
+

@@ -1,15 +1,13 @@
 msgid ""
 msgstr ""
-"MIME-Version: 1.0
-"
-"Content-Type: text/plain; charset=UTF-8
-"
-"Content-Transfer-Encoding: 8bit
-"
-"Language: it_IT
-"
-"X-Generator: RentOS manual
-"
+"Project-Id-Version: fluent-support (RentOS)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: it_IT\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: RentOS manual\n"
+"X-Domain: fluent-support\n"
 
 msgid "Not registered?"
 msgstr "Non sei registrato?"
@@ -25,3 +23,208 @@ msgstr "Reimposta la password"
 
 msgid "Support"
 msgstr "Assistenza"
+
+msgid "Add Attachment"
+msgstr "Aggiungi allegato"
+
+msgid "Additional info"
+msgstr "Informazioni aggiuntive"
+
+msgid "All"
+msgstr "Tutte"
+
+msgid "All Products"
+msgstr "Tutti i prodotti"
+
+msgid "All Tickets"
+msgstr "Tutte le richieste"
+
+msgid "Apply"
+msgstr "Applica"
+
+msgid "Ascending"
+msgstr "Crescente"
+
+msgid "Back to All Tickets"
+msgstr "Torna a tutte le richieste"
+
+msgid "Browse Files"
+msgstr "Sfoglia i file"
+
+msgid "Click Here to Write a reply"
+msgstr "Clicca qui per scrivere una risposta"
+
+msgid "Close Ticket"
+msgstr "Chiudi la richiesta"
+
+msgid "Closed"
+msgstr "Chiusa"
+
+msgid "Completed"
+msgstr "Completata"
+
+msgid "Conversation"
+msgstr "Conversazione"
+
+msgid "Created at"
+msgstr "Creata il"
+
+msgid "Date"
+msgstr "Data"
+
+msgid "Descending"
+msgstr "Decrescente"
+
+msgid "Failed"
+msgstr "Non riuscito"
+
+msgid "If you still need help with this issue, reopen the ticket and reply."
+msgstr "Se hai ancora bisogno di aiuto, riapri la richiesta e rispondi."
+
+msgid "Log Out"
+msgstr "Esci"
+
+msgid "No tickets found"
+msgstr "Nessuna richiesta trovata"
+
+msgid "Normal"
+msgstr "Normale"
+
+msgid "Open"
+msgstr "Aperta"
+
+msgid "Page %1$s of %2$s"
+msgstr "Pagina %1$s di %2$s"
+
+msgid "Please verify that you are not a robot."
+msgstr "Conferma di non essere un robot."
+
+msgid "Private"
+msgstr "Privata"
+
+msgid "Processing"
+msgstr "In lavorazione"
+
+msgid "Public"
+msgstr "Pubblica"
+
+msgid "Refresh"
+msgstr "Aggiorna"
+
+msgid "Reopen This ticket"
+msgstr "Riapri la richiesta"
+
+msgid "Reply"
+msgstr "Rispondi"
+
+msgid "Reply and Close"
+msgstr "Rispondi e chiudi"
+
+msgid "Retry"
+msgstr "Riprova"
+
+msgid "Search..."
+msgstr "Cerca…"
+
+msgid "Sort"
+msgstr "Ordina"
+
+msgid "Sort By"
+msgstr "Ordina per"
+
+msgid "Status"
+msgstr "Stato"
+
+msgid "Suggested Articles"
+msgstr "Articoli suggeriti"
+
+msgid "Support Staff"
+msgstr "Assistenza"
+
+msgid "This ticket is"
+msgstr "Stato della richiesta:"
+
+msgid "This ticket was closed on %1$s by %2$s."
+msgstr "La richiesta è stata chiusa il %1$s da %2$s."
+
+msgid "This ticket was closed on %s."
+msgstr "La richiesta è stata chiusa il %s."
+
+msgid "Thread Follower"
+msgstr "Partecipante"
+
+msgid "Thread Starter"
+msgstr "Autore della richiesta"
+
+msgid "Ticket ID"
+msgstr "ID richiesta"
+
+msgid "Ticket number:"
+msgstr "Numero della richiesta:"
+
+msgid "Title"
+msgstr "Titolo"
+
+msgid "Unknown error. Please reload this page"
+msgstr "Errore sconosciuto. Ricarica la pagina"
+
+msgid "View Your Tickets"
+msgstr "Le tue richieste"
+
+msgid "Waiting for your reply"
+msgstr "In attesa della tua risposta"
+
+msgid "Write a reply"
+msgstr "Scrivi una risposta"
+
+msgid "You"
+msgstr "Tu"
+
+msgid "Only you and official support agents can view this conversation"
+msgstr "Solo tu e l'assistenza potete vedere questa conversazione"
+
+msgid "Create Ticket"
+msgstr "Invia richiesta"
+
+msgid "started the conversation"
+msgstr "ha iniziato la conversazione"
+
+msgid "created this ticket on your behalf"
+msgstr "ha creato questa richiesta per tuo conto"
+
+msgid "Your account is currently inactive. You cannot create new tickets or reply to existing ones. Please contact the site administrator for assistance"
+msgstr "Il tuo account non è attivo: non puoi creare nuove richieste né rispondere a quelle esistenti. Contatta l'amministratore del sito."
+
+msgid "Please provide details about your problem"
+msgstr "Descriva il problema: più dettagli, più rapido sarà l'aiuto"
+
+msgid "Please do not share any private information."
+msgstr "Non condividere informazioni private."
+
+msgid "page"
+msgstr "pagina"
+
+msgid "priority"
+msgstr "priorità"
+
+msgid "Related Product/Service"
+msgstr "A cosa si riferisce"
+
+msgid "reCAPTCHA failed to load."
+msgstr "Impossibile caricare reCAPTCHA."
+
+msgid "Select related Product/Service"
+msgstr "Scegli a cosa si riferisce"
+
+msgid "subject"
+msgstr "oggetto"
+
+msgid "What's this support ticket about?"
+msgstr "Di cosa tratta questa richiesta?"
+
+msgid "Submit a Support Ticket"
+msgstr "Nuova richiesta di assistenza"
+
+msgid "Ticket Details"
+msgstr "Dettagli della richiesta"
+

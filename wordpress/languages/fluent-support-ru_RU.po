@@ -1,0 +1,1082 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: fluent-support (RentOS)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru_RU\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: RentOS manual\n"
+"X-Domain: fluent-support\n"
+
+msgid "User registration is not enabled on this site."
+msgstr "Регистрация пользователей на этом сайте не включена."
+
+msgid "You do not have permission to do this."
+msgstr "У вас нет прав на это действие."
+
+msgid "Security check failed."
+msgstr "Проверка безопасности не пройдена."
+
+msgid "You do not have permission to export this data."
+msgstr "У вас нет прав выгружать эти данные."
+
+msgid "Invalid request method"
+msgstr "Недопустимый метод запроса"
+
+msgid "Method Not Allowed"
+msgstr "Метод не разрешён"
+
+msgid "Missing required parameter"
+msgstr "Не хватает обязательного параметра"
+
+msgid "Bad Request"
+msgstr "Неверный запрос"
+
+msgid "Invalid route"
+msgstr "Недопустимый маршрут"
+
+msgid "Not Found"
+msgstr "Не найдено"
+
+msgid "Invalid attachment hash."
+msgstr "Недопустимый хэш вложения."
+
+msgid "Forbidden"
+msgstr "Доступ запрещён"
+
+msgid "Missing ticket ID parameter"
+msgstr "Не указан ID заявки"
+
+msgid "Missing required parameters"
+msgstr "Не хватает обязательных параметров"
+
+msgid "Invalid ticket hash format"
+msgstr "Неверный формат хэша заявки"
+
+msgid "Rate limit exceeded. Please try again later."
+msgstr "Превышен лимит запросов. Попробуйте позже."
+
+msgid "Too Many Requests"
+msgstr "Слишком много запросов"
+
+msgid "Could not create your account. The username or email address may already be registered."
+msgstr "Не удалось создать аккаунт. Возможно, это имя пользователя или адрес почты уже зарегистрированы."
+
+msgid "Username or email is required."
+msgstr "Нужно указать имя пользователя или адрес почты."
+
+msgid "user_id is not accepted when creating a customer. The WordPress user is linked by the customer email."
+msgstr "При создании клиента user_id не принимается. Пользователь WordPress связывается по адресу почты клиента."
+
+msgid "You do not have access to this mailbox."
+msgstr "У вас нет доступа к этому почтовому ящику."
+
+msgid "Default WordPress Storage"
+msgstr "Стандартное хранилище WordPress"
+
+msgid "Upload driver updated."
+msgstr "Хранилище для загрузок обновлено."
+
+msgid "Settings saved."
+msgstr "Настройки сохранены."
+
+msgid "Someone replied to this ticket while you were writing."
+msgstr "Пока вы писали, на эту заявку кто-то ответил."
+
+msgid "You can change at most %d tickets at a time."
+msgstr "За один раз можно изменить не больше %d заявок."
+
+msgid "Please select tags to remove"
+msgstr "Выберите теги для удаления"
+
+msgid "Selected tags have been removed from the tickets"
+msgstr "Выбранные теги удалены из заявок"
+
+msgid "Priority changed on %d tickets."
+msgstr "Приоритет изменён у заявок: %d."
+
+msgid "Product changed on %d tickets."
+msgstr "Продукт изменён у заявок: %d."
+
+msgid "%d tickets have been reopened."
+msgstr "Открыто заново заявок: %d."
+
+msgid "Web"
+msgstr "Сайт"
+
+msgid "Agent outreach"
+msgstr "Обращение агента"
+
+msgid "MCP (AI agents)"
+msgstr "MCP (ИИ-агенты)"
+
+msgid "Imported: Awesome Support"
+msgstr "Импорт: Awesome Support"
+
+msgid "Imported: Freshdesk"
+msgstr "Импорт: Freshdesk"
+
+msgid "Imported: Help Scout"
+msgstr "Импорт: Help Scout"
+
+msgid "Imported: JS Help Desk"
+msgstr "Импорт: JS Help Desk"
+
+msgid "Imported: SupportCandy"
+msgstr "Импорт: SupportCandy"
+
+msgid "Imported: Zendesk"
+msgstr "Импорт: Zendesk"
+
+msgid "No source"
+msgstr "Источник не указан"
+
+msgid "Please write a reply before sending."
+msgstr "Напишите ответ перед отправкой."
+
+msgid "Merged customer record #%1$s (%2$s) into this one after the address was confirmed. %3$s ticket moved and its shared link was reissued."
+msgid_plural "Merged customer record #%1$s (%2$s) into this one after the address was confirmed. %3$s tickets moved and their shared links were reissued."
+msgstr[0] "После подтверждения адреса карточка клиента #%1$s (%2$s) объединена с этой. Перенесена %3$s заявка, её общая ссылка выдана заново."
+msgstr[1] "После подтверждения адреса карточка клиента #%1$s (%2$s) объединена с этой. Перенесено %3$s заявки, их общие ссылки выданы заново."
+msgstr[2] "После подтверждения адреса карточка клиента #%1$s (%2$s) объединена с этой. Перенесено %3$s заявок, их общие ссылки выданы заново."
+
+msgid "Moved %3$s ticket from customer record #%1$s (%2$s) into this one after the address was confirmed. That record still holds other data and was kept."
+msgid_plural "Moved %3$s tickets from customer record #%1$s (%2$s) into this one after the address was confirmed. That record still holds other data and was kept."
+msgstr[0] "После подтверждения адреса %3$s заявка перенесена из карточки клиента #%1$s (%2$s) в эту. В той карточке есть другие данные, она сохранена."
+msgstr[1] "После подтверждения адреса %3$s заявки перенесены из карточки клиента #%1$s (%2$s) в эту. В той карточке есть другие данные, она сохранена."
+msgstr[2] "После подтверждения адреса %3$s заявок перенесено из карточки клиента #%1$s (%2$s) в эту. В той карточке есть другие данные, она сохранена."
+
+msgid "Please provide message for not logged in users. You can place login shortcode too. Use shortcode <code>[fluent_support_login]</code> to show built-in login form. For the user registration use this shortcode <code>[fluent_support_signup]</code> and for both form please use <code>[fluent_support_auth]</code>. Registration forms only show when \"Anyone can register\" is enabled in Settings > General."
+msgstr "Укажите сообщение для невошедших пользователей. Можно вставить и шорткод входа: <code>[fluent_support_login]</code> показывает встроенную форму входа, <code>[fluent_support_signup]</code> форму регистрации, а <code>[fluent_support_auth]</code> обе формы. Формы регистрации показываются, только если в Настройки > Общие включено «Любой может зарегистрироваться»."
+
+msgid "Two-Factor Authentication"
+msgstr "Двухфакторная аутентификация"
+
+msgid "Portal sign-in is handled by the FluentAuth plugin, so two-factor authentication for your customers and agents is set up there. FluentAuth applies it to the roles you choose, so include your customers' role. <a href=\"%s\">Open FluentAuth settings</a>"
+msgstr "Вход в портал обеспечивает плагин FluentAuth, поэтому двухфакторная аутентификация для клиентов и агентов настраивается там. FluentAuth применяет её к выбранным ролям, так что включите роль ваших клиентов. <a href=\"%s\">Открыть настройки FluentAuth</a>"
+
+msgid "Tickets: Advanced filter toggle"
+msgstr "Заявки: расширенный фильтр"
+
+msgid "Tickets: Refresh"
+msgstr "Заявки: обновить"
+
+msgid "Tickets: Create Ticket"
+msgstr "Заявки: создать заявку"
+
+msgid "Tickets: Reset filter"
+msgstr "Заявки: сбросить фильтр"
+
+msgid "Tickets: All Tickets"
+msgstr "Заявки: все заявки"
+
+msgid "Tickets: My Tickets"
+msgstr "Заявки: мои заявки"
+
+msgid "Tickets: Unassigned"
+msgstr "Заявки: без исполнителя"
+
+msgid "Tickets: Waiting for reply"
+msgstr "Заявки: ждут ответа"
+
+msgid "Tickets: Bookmarks"
+msgstr "Заявки: закладки"
+
+msgid "Tickets: Toggle (Open, active, close, all)"
+msgstr "Заявки: переключить (открытые, активные, закрытые, все)"
+
+msgid "Ticket Reply: Reply"
+msgstr "Ответ: ответить"
+
+msgid "Ticket Reply: Personal note"
+msgstr "Ответ: личная заметка"
+
+msgid "Ticket Reply: Merge"
+msgstr "Ответ: объединить"
+
+msgid "Ticket Reply: Bookmarks"
+msgstr "Ответ: закладки"
+
+msgid "Ticket Reply: Refresh"
+msgstr "Ответ: обновить"
+
+msgid "Ticket Reply: Next ticket"
+msgstr "Ответ: следующая заявка"
+
+msgid "Ticket Reply: Previous ticket"
+msgstr "Ответ: предыдущая заявка"
+
+msgid "Ticket Reply: Close ticket"
+msgstr "Ответ: закрыть заявку"
+
+msgid "Remote Portal"
+msgstr "Удалённый портал"
+
+msgid "Improve Writing"
+msgstr "Улучшить текст"
+
+msgid "Fix Spelling & Grammar"
+msgstr "Исправить орфографию и грамматику"
+
+msgid "Make Shorter"
+msgstr "Сделать короче"
+
+msgid "Make Longer"
+msgstr "Сделать длиннее"
+
+msgid "Simplify Language"
+msgstr "Упростить язык"
+
+msgid "Request More Information"
+msgstr "Запросить подробности"
+
+msgid "Acknowledge Issue"
+msgstr "Признать проблему"
+
+msgid "Provide Solution"
+msgstr "Предложить решение"
+
+msgid "Follow Up"
+msgstr "Напомнить"
+
+msgid "Paid Purchases"
+msgstr "Оплаченные покупки"
+
+msgid "First Paid Order"
+msgstr "Первый оплаченный заказ"
+
+msgid "Last Paid Order"
+msgstr "Последний оплаченный заказ"
+
+msgid "Refunded"
+msgstr "Возвращено"
+
+msgid "%d renewal"
+msgid_plural "%d renewals"
+msgstr[0] "%d продление"
+msgstr[1] "%d продления"
+msgstr[2] "%d продлений"
+
+msgid "Next renewal %s"
+msgstr "Следующее продление %s"
+
+msgid "Expired %s"
+msgstr "Истекло %s"
+
+msgid "%1$s · #%2$s"
+msgstr "%1$s · #%2$s"
+
+msgid "Recent Purchases"
+msgstr "Недавние покупки"
+
+msgid "Default Business Inbox"
+msgstr "Основной почтовый ящик"
+
+msgid "Select Agent (optional)"
+msgstr "Выберите агента (необязательно)"
+
+msgid "Default Assigned Agent (optional)"
+msgstr "Агент по умолчанию (необязательно)"
+
+msgid "Priority (Admin)"
+msgstr "Приоритет (для администратора)"
+
+msgid "Select Priority"
+msgstr "Выберите приоритет"
+
+msgid "%1$s assigned %2$s to this ticket"
+msgstr "%1$s назначил на эту заявку: %2$s"
+
+msgid "%s assigned this ticket to themselves"
+msgstr "%s назначил эту заявку на себя"
+
+msgid "%s started this conversation"
+msgstr "%s начал этот разговор"
+
+msgid "%1$s of %2$s selected tickets are closed. Only they reopen."
+msgstr "Из выбранных заявок закрыто %1$s из %2$s. Открыты заново будут только они."
+
+msgid "%1$s of %2$s ticket replies sent as context"
+msgstr "Как контекст отправлено ответов: %1$s из %2$s"
+
+msgid "%1$s of %2$s tickets processed"
+msgstr "Обработано заявок: %1$s из %2$s"
+
+msgid "%1$s of %2$s tickets queued. Narrow the date range or run again to cover the rest."
+msgstr "В очереди заявок: %1$s из %2$s. Сузьте период или запустите ещё раз, чтобы охватить остальные."
+
+msgid "%1$s out of %2$s tickets"
+msgstr "%1$s из %2$s заявок"
+
+msgid "%1$sd %2$sh"
+msgstr "%1$sд %2$sч"
+
+msgid "%1$sh %2$sm"
+msgstr "%1$sч %2$sм"
+
+msgid "%s Integration Settings"
+msgstr "Настройки интеграции %s"
+
+msgid "%s People Watching"
+msgstr "Смотрят: %s"
+
+msgid "%s Permission"
+msgstr "Право: %s"
+
+msgid "%s Permissions"
+msgstr "Права: %s"
+
+msgid "%s Person Watching"
+msgstr "Смотрит: %s"
+
+msgid "%s Team"
+msgstr "Команда: %s"
+
+msgid "%s Teams"
+msgstr "Команды: %s"
+
+msgid "%s closed"
+msgstr "Закрыто: %s"
+
+msgid "%s estimated"
+msgstr "Оценка: %s"
+
+msgid "%s logged"
+msgstr "Учтено: %s"
+
+msgid "%s min"
+msgstr "%s мин"
+
+msgid "%s more. Search to narrow the list."
+msgstr "Ещё %s. Воспользуйтесь поиском, чтобы сузить список."
+
+msgid "%s new replies arrived while you were writing."
+msgstr "Пока вы писали, пришло новых ответов: %s."
+
+msgid "%s new reply arrived while you were writing."
+msgstr "Пока вы писали, пришёл новый ответ: %s."
+
+msgid "%s replied while you were writing."
+msgstr "Пока вы писали, ответил %s."
+
+msgid "%s selected"
+msgstr "Выбрано: %s"
+
+msgid "%s tag"
+msgstr "Тег: %s"
+
+msgid "%s tags"
+msgstr "Теги: %s"
+
+msgid "%s ticket"
+msgstr "Заявка: %s"
+
+msgid "%s ticket selected"
+msgstr "Выбрана заявка: %s"
+
+msgid "%s ticket wasn't audited in this run. Click Run Audit again to retry it."
+msgstr "Заявка не проверена при этом запуске: %s. Нажмите «Запустить проверку» ещё раз, чтобы повторить."
+
+msgid "%s tickets"
+msgstr "Заявок: %s"
+
+msgid "%s tickets selected"
+msgstr "Выбрано заявок: %s"
+
+msgid "%s tickets weren't audited in this run. Click Run Audit again to retry any that still need it."
+msgstr "Заявок не проверено при этом запуске: %s. Нажмите «Запустить проверку» ещё раз, чтобы повторить те, которым это ещё нужно."
+
+msgid "%s tool registered"
+msgstr "Зарегистрирован инструмент: %s"
+
+msgid "%s tools registered"
+msgstr "Зарегистрировано инструментов: %s"
+
+msgid "%sm"
+msgstr "%sм"
+
+msgid "(%s is this inbox name)"
+msgstr "(%s это название этого ящика)"
+
+msgid "(Last migration: %s)"
+msgstr "(Последний перенос: %s)"
+
+msgid "+%s more"
+msgstr "+ещё %s"
+
+msgid "0.0: Deterministic"
+msgstr "0.0: строго определённо"
+
+msgid "0.1 to 0.3: Grounded"
+msgstr "от 0.1 до 0.3: по фактам"
+
+msgid "0.4 to 0.7: Balanced"
+msgstr "от 0.4 до 0.7: сбалансированно"
+
+msgid "0.8 to 1.0: Creative"
+msgstr "от 0.8 до 1.0: творчески"
+
+msgid "1.1 to 1.5: Divergent"
+msgstr "от 1.1 до 1.5: свободно"
+
+msgid "1.6 to 2.0: Unstable"
+msgstr "от 1.6 до 2.0: непредсказуемо"
+
+msgid "A key ending in %s is saved."
+msgstr "Сохранён ключ, оканчивающийся на %s."
+
+msgid "AI audit: %s"
+msgstr "Проверка ИИ: %s"
+
+msgid "API key saved. Leave blank to keep it."
+msgstr "Ключ API сохранён. Оставьте пустым, чтобы не менять."
+
+msgid "Add %1$s to %2$s"
+msgstr "Добавить %1$s в %2$s"
+
+msgid "Add a New Product"
+msgstr "Добавить новый продукт"
+
+msgid "Add or remove"
+msgstr "Добавить или удалить"
+
+msgid "Administrator, full site access"
+msgstr "Администратор, полный доступ к сайту"
+
+msgid "Already done: %1$s. The rest failed. Click \"%2$s\" again to retry it."
+msgstr "Уже сделано: %1$s. Остальное не удалось. Нажмите «%2$s» ещё раз, чтобы повторить."
+
+msgid "Already on all"
+msgstr "Уже у всех"
+
+msgid "Already set"
+msgstr "Уже задано"
+
+msgid "An incomplete migration exists (%s completed). Would you like to resume from the previous one?"
+msgstr "Есть незавершённый перенос (выполнено %s). Продолжить с прошлого места?"
+
+msgid "Applying: %s"
+msgstr "Применяем: %s"
+
+msgid "Are you sure you want to delete %s customer? All data associated with this customer will be deleted."
+msgstr "Точно удалить клиента (%s)? Все данные, связанные с ним, будут удалены."
+
+msgid "Are you sure you want to delete %s customers? All data associated with these customers will be deleted."
+msgstr "Точно удалить клиентов (%s)? Все данные, связанные с ними, будут удалены."
+
+msgid "Are you sure you want to delete %s workflow? All associated data will be deleted."
+msgstr "Точно удалить рабочий процесс (%s)? Все связанные данные будут удалены."
+
+msgid "Are you sure you want to delete %s workflows? All associated data will be deleted."
+msgstr "Точно удалить рабочие процессы (%s)? Все связанные данные будут удалены."
+
+msgid "Are you sure you want to regenerate the webhook URL? You will need to update every service that uses the current URL."
+msgstr "Точно создать новый адрес вебхука? Придётся обновить его во всех сервисах, которые используют текущий."
+
+msgid "Assign"
+msgstr "Назначить"
+
+msgid "Assign %1$s to %2$s"
+msgstr "Назначить %1$s на %2$s"
+
+msgid "Assign %1$s via %2$s"
+msgstr "Назначить %1$s через %2$s"
+
+msgid "Assign to agent group"
+msgstr "Назначить группе агентов"
+
+msgid "Assigned Agent: %s"
+msgstr "Назначенный агент: %s"
+
+msgid "Assignment"
+msgstr "Назначение"
+
+msgid "When the subject line contains \"Bug Report\", Fluent Support automatically adds a tag, sends an email to the customer and assigns a support agent."
+msgstr "Если в теме письма есть «Bug Report», Fluent Support автоматически добавляет тег, отправляет письмо клиенту и назначает агента поддержки."
+
+msgid "Automatic workflows are always on and run on the ticket events you select. Based on what happens to your tickets and conversations, they run the defined actions automatically."
+msgstr "Автоматические рабочие процессы всегда включены и срабатывают на выбранные события заявок. В зависимости от того, что происходит с заявками и перепиской, они сами выполняют заданные действия."
+
+msgid "Automation"
+msgstr "Автоматизация"
+
+msgid "Average Waiting: %s"
+msgstr "Среднее ожидание: %s"
+
+msgid "Bulk actions"
+msgstr "Массовые действия"
+
+msgid "Choose a group"
+msgstr "Выберите группу"
+
+msgid "Choose a priority"
+msgstr "Выберите приоритет"
+
+msgid "Choose a product"
+msgstr "Выберите продукт"
+
+msgid "Choose a workflow"
+msgstr "Выберите рабочий процесс"
+
+msgid "Choose an agent"
+msgstr "Выберите агента"
+
+msgid "Choose tags"
+msgstr "Выберите теги"
+
+msgid "Clear selection"
+msgstr "Снять выделение"
+
+msgid "Clear selection (Esc)"
+msgstr "Снять выделение (Esc)"
+
+msgid "Click the \"%s\" button to get the authorization code."
+msgstr "Нажмите кнопку «%s», чтобы получить код авторизации."
+
+msgid "Client Priority: %s"
+msgstr "Приоритет клиента: %s"
+
+msgid "Close %s"
+msgstr "Закрыть %s"
+
+msgid "Close this ticket?"
+msgstr "Закрыть эту заявку?"
+
+msgid "Connect with wp-config.php"
+msgstr "Подключить через wp-config.php"
+
+msgid "Connect your main site"
+msgstr "Подключите основной сайт"
+
+msgid "Connected as"
+msgstr "Подключено как"
+
+msgid "Connection"
+msgstr "Подключение"
+
+msgid "Connector version"
+msgstr "Версия коннектора"
+
+msgid "Conversation created at %s"
+msgstr "Разговор начат %s"
+
+msgid "Copied to clipboard: %s"
+msgstr "Скопировано: %s"
+
+msgid "Copy key"
+msgstr "Скопировать ключ"
+
+msgid "Copy this code and paste it into the \"%s\" field."
+msgstr "Скопируйте этот код и вставьте его в поле «%s»."
+
+msgid "Create Product"
+msgstr "Создать продукт"
+
+msgid "Created"
+msgstr "Создано"
+
+msgid "Custom"
+msgstr "Своё"
+
+msgid "Customer data from"
+msgstr "Данные клиента из"
+
+msgid "Customer portal"
+msgstr "Портал клиента"
+
+msgid "Customer portal page on the main site"
+msgstr "Страница портала клиента на основном сайте"
+
+msgid "Danger zone"
+msgstr "Опасная зона"
+
+msgid "Delete %s"
+msgstr "Удалить %s"
+
+msgid "Delete %s ticket?"
+msgstr "Удалить заявку (%s)?"
+
+msgid "Delete %s tickets?"
+msgstr "Удалить заявки (%s)?"
+
+msgid "Delete tickets"
+msgstr "Удалить заявки"
+
+msgid "Deleting tickets"
+msgstr "Удаляем заявки"
+
+msgid "Do you want to delete all imported tickets and their data?"
+msgstr "Удалить все импортированные заявки и их данные?"
+
+msgid "Download the connector plugin (.zip)"
+msgstr "Скачать плагин-коннектор (.zip)"
+
+msgid "Draft created at %s"
+msgstr "Черновик создан %s"
+
+msgid "Draft updated at %s"
+msgstr "Черновик обновлён %s"
+
+msgid "Your email provider may send a confirmation email for the forwarding setup. It arrives here as a new ticket, so check your latest tickets for the confirmation code."
+msgstr "Ваш почтовый сервис может прислать письмо для подтверждения пересылки. Оно придёт сюда новой заявкой, поэтому ищите код подтверждения среди последних заявок."
+
+msgid "Connect your email address to the Fluent Support email parser so that emails and email replies from your customers are synced with your tickets."
+msgstr "Подключите свой адрес почты к разбору писем Fluent Support, чтобы письма и ответы клиентов попадали в заявки."
+
+msgid "Enhance Responses with AI"
+msgstr "Улучшить ответы с помощью ИИ"
+
+msgid "Fallback Agent"
+msgstr "Запасной агент"
+
+msgid "First response"
+msgstr "Первый ответ"
+
+msgid "Available times are based on a sample of this event type's upcoming availability. You can adjust the times offered below."
+msgstr "Доступное время основано на выборке ближайшей доступности этого типа событий. Предлагаемое время можно изменить ниже."
+
+msgid "From Name"
+msgstr "Имя отправителя"
+
+msgid "Generate Responses with AI"
+msgstr "Создавать ответы с помощью ИИ"
+
+msgid "Generate Responses with FluentBot"
+msgstr "Создавать ответы с помощью FluentBot"
+
+msgid "Generate a new key"
+msgstr "Создать новый ключ"
+
+msgid "Generate connection key"
+msgstr "Создать ключ подключения"
+
+msgid "Good afternoon"
+msgstr "Добрый день"
+
+msgid "Good evening"
+msgstr "Добрый вечер"
+
+msgid "Good morning"
+msgstr "Доброе утро"
+
+msgid "Have a new license key?"
+msgstr "Есть новый лицензионный ключ?"
+
+msgid "Add this URL as the Redirection URL of your Help Scout app. Help Scout needs it to authorize the app before the import can start:"
+msgstr "Добавьте этот адрес как Redirection URL вашего приложения Help Scout. Он нужен Help Scout, чтобы авторизовать приложение перед началом импорта:"
+
+msgid "If you don't select any agents, the report shows all agents. Otherwise, it shows only the selected agents."
+msgstr "Если агенты не выбраны, отчёт показывает всех. Иначе только выбранных."
+
+msgid "Inbox name"
+msgstr "Название ящика"
+
+msgid "Internal Ticket ID: #%s"
+msgstr "Внутренний ID заявки: #%s"
+
+msgid "Last Run"
+msgstr "Последний запуск"
+
+msgid "Last call to main site"
+msgstr "Последнее обращение к основному сайту"
+
+msgid "Last checked: %s"
+msgstr "Последняя проверка: %s"
+
+msgid "Last request from main site"
+msgstr "Последний запрос от основного сайта"
+
+msgid "Leave"
+msgstr "Уйти"
+
+msgid "Let AI draft ticket responses for you."
+msgstr "Пусть ИИ готовит черновики ответов на заявки."
+
+msgid "Let FluentBot draft ticket responses from your knowledge base."
+msgstr "Пусть FluentBot готовит черновики ответов на заявки по вашей базе знаний."
+
+msgid "You are in a grace period, so everything keeps working for now. Updates and support end soon. Renew your license to keep them."
+msgstr "Сейчас льготный период, поэтому пока всё работает. Скоро обновления и поддержка закончатся. Продлите лицензию, чтобы их сохранить."
+
+msgid "Mailbox: %s"
+msgstr "Почтовый ящик: %s"
+
+msgid "Main site"
+msgstr "Основной сайт"
+
+msgid "Manage Application Passwords"
+msgstr "Управлять паролями приложений"
+
+msgid "When a customer writes in with a specific question, you run this workflow to send a reply, add a tag and assign the ticket to someone on your team."
+msgstr "Когда клиент пишет с конкретным вопросом, вы запускаете этот рабочий процесс, чтобы отправить ответ, добавить тег и назначить заявку кому-то из команды."
+
+msgid "A manual workflow does nothing until you run it. When you apply a manual workflow to a ticket, Fluent Support performs all of its actions."
+msgstr "Ручной рабочий процесс ничего не делает, пока его не запустить. Когда вы применяете его к заявке, Fluent Support выполняет все его действия."
+
+msgid "Max Waiting: %s"
+msgstr "Максимальное ожидание: %s"
+
+msgid "Migrate tickets from %s in one click."
+msgstr "Перенесите заявки из %s одним нажатием."
+
+msgid "More actions"
+msgstr "Другие действия"
+
+msgid "Move %1$s to %2$s"
+msgstr "Перенести %1$s в %2$s"
+
+msgid "Never"
+msgstr "Никогда"
+
+msgid "New replies loaded. Your reply is still in the editor."
+msgstr "Загружены новые ответы. Ваш ответ остался в редакторе."
+
+msgid "New reply on this ticket"
+msgstr "Новый ответ в этой заявке"
+
+msgid "No prior replies on this ticket yet, so there is nothing to pick as context"
+msgstr "В этой заявке ещё нет ответов, поэтому выбрать контекст не из чего"
+
+msgid "No tags yet"
+msgstr "Тегов пока нет"
+
+msgid "None of the selected tickets have a tag."
+msgstr "Ни у одной из выбранных заявок нет тега."
+
+msgid "None reported"
+msgstr "Не сообщалось"
+
+msgid "Not recorded"
+msgstr "Не записано"
+
+msgid "Not set yet"
+msgstr "Ещё не задано"
+
+msgid "Not yet"
+msgstr "Ещё нет"
+
+msgid "Nothing matches \"%s\""
+msgstr "Ничего не найдено по «%s»"
+
+msgid "Nothing to choose from yet"
+msgstr "Пока не из чего выбрать"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "On %1$s of %2$s"
+msgstr "У %1$s из %2$s"
+
+msgid "On all"
+msgstr "У всех"
+
+msgid "Once you activate auto-forwarding for %s, the status will become active."
+msgstr "Когда вы включите автоматическую пересылку для %s, статус станет активным."
+
+msgid "Only a site administrator can connect, disconnect or switch Remote Portal."
+msgstr "Подключать, отключать и переключать удалённый портал может только администратор сайта."
+
+msgid "Page %1$s of %2$s"
+msgstr "Страница %1$s из %2$s"
+
+msgid "Please choose whether to move all tickets or only the selected ones."
+msgstr "Выберите, переносить все заявки или только выбранные."
+
+msgid "Please enable auto-forwarding of your emails from %s to the following address."
+msgstr "Включите автоматическую пересылку писем с %s на этот адрес."
+
+msgid "Please provide your Fluent Support license key."
+msgstr "Укажите лицензионный ключ Fluent Support."
+
+msgid "Please select a contact (%s)"
+msgstr "Выберите контакт (%s)"
+
+msgid "Please select at least one ticket."
+msgstr "Выберите хотя бы одну заявку."
+
+msgid "Previous Conversations (%s)"
+msgstr "Предыдущие обращения (%s)"
+
+msgid "Product: %s"
+msgstr "Продукт: %s"
+
+msgid "Ready to import. Tickets: %1$s, replies: %2$s, customers: %3$s. Tickets that were already migrated are skipped."
+msgstr "Всё готово к импорту. Заявок: %1$s, ответов: %2$s, клиентов: %3$s. Уже перенесённые заявки пропускаются."
+
+msgid "Sign-in and registration forms are handled by the FluentAuth plugin. The settings below only apply to the ticket creation form."
+msgstr "Формы входа и регистрации обеспечивает плагин FluentAuth. Настройки ниже относятся только к форме создания заявки."
+
+msgid "Refine ticket responses with AI for clarity and precision."
+msgstr "Доводите ответы на заявки с помощью ИИ, чтобы они были понятнее и точнее."
+
+msgid "Replace APPLICATION PASSWORD with the Application Password you created for that user on this site. The token must be the same on both sites. Then open the Fluent Support Connector on the main site, choose the portal page, and save."
+msgstr "Замените APPLICATION PASSWORD паролем приложения, который вы создали для этого пользователя на этом сайте. Токен должен совпадать на обоих сайтах. Затем откройте Fluent Support Connector на основном сайте, выберите страницу портала и сохраните."
+
+msgid "Instead of a connection key, you can set the connection in wp-config.php on both sites. Fill in the portal page and the username, then copy each snippet into the right file. The token below is new and works only once both sites have it."
+msgstr "Вместо ключа подключения можно задать подключение в wp-config.php на обоих сайтах. Укажите страницу портала и имя пользователя, затем скопируйте каждый фрагмент в нужный файл. Токен ниже новый и заработает, только когда он будет на обоих сайтах."
+
+msgid "A main site is connected, but Remote Portal is switched off, so the main site cannot reach this site. Switch it on to use the connection."
+msgstr "Основной сайт подключён, но удалённый портал выключен, поэтому основной сайт не может достучаться до этого. Включите его, чтобы пользоваться подключением."
+
+msgid "The main site is connected through wp-config.php. Change or remove the constants there to change the connection."
+msgstr "Основной сайт подключён через wp-config.php. Чтобы изменить подключение, поменяйте или удалите там константы."
+
+msgid "FLUENT_SUPPORT_PORTAL_BASE_URL is set in wp-config.php, but the connection is incomplete. Also set FLUENT_SUPPORT_REMOTE_API_TOKEN (the same on both sites). If FLUENT_SUPPORT_REMOTE_API_URL is set, it must be on the main site."
+msgstr "В wp-config.php задан FLUENT_SUPPORT_PORTAL_BASE_URL, но подключение не завершено. Задайте также FLUENT_SUPPORT_REMOTE_API_TOKEN (одинаковый на обоих сайтах). Если задан FLUENT_SUPPORT_REMOTE_API_URL, он должен быть на основном сайте."
+
+msgid "Any administrator or agent allowed to act for customers (connection set in wp-config.php)"
+msgstr "Любой администратор или агент с правом действовать от имени клиентов (подключение задано в wp-config.php)"
+
+msgid "Disconnect the main site? Customer widgets stop. Its portal keeps working while it has the Application Password: revoke that from the user's profile to cut it off."
+msgstr "Отключить основной сайт? Виджеты для клиентов перестанут работать. Его портал продолжит работать, пока у него есть пароль приложения: отзовите его в профиле пользователя, чтобы отключить полностью."
+
+msgid "Host your helpdesk on its own site, for example support.example.com, and let customers create and follow tickets on your main website. Install the Fluent Support Connector on the main site, then connect the two sites here."
+msgstr "Держите службу поддержки на отдельном сайте, например support.example.com, а клиенты пусть создают заявки и следят за ними на основном сайте. Установите Fluent Support Connector на основной сайт и свяжите сайты здесь."
+
+msgid "The key works once and expires 30 minutes after it was generated. This page updates when the main site connects."
+msgstr "Ключ одноразовый и действует 30 минут после создания. Страница обновится, когда основной сайт подключится."
+
+msgid "The Fluent Support Server plugin is still active. Deactivate it: Remote Portal now replaces it."
+msgstr "Плагин Fluent Support Server всё ещё активен. Отключите его: теперь его заменяет удалённый портал."
+
+msgid "Application Passwords are not available on this site. A security plugin may have turned them off, or the site is not served over HTTPS. The main site cannot connect until they are available."
+msgstr "Пароли приложений на этом сайте недоступны. Возможно, их отключил плагин безопасности, или сайт работает не по HTTPS. Пока они недоступны, основной сайт подключиться не сможет."
+
+msgid "This site is not served over HTTPS. Application Passwords and customer data would travel unencrypted."
+msgstr "Сайт работает не по HTTPS. Пароли приложений и данные клиентов передавались бы без шифрования."
+
+msgid "Run your helpdesk on its own site and let customers create and follow tickets on your main website."
+msgstr "Держите службу поддержки на отдельном сайте, а клиенты пусть создают заявки и следят за ними на основном сайте."
+
+msgid "Create a WordPress user and add it as a support agent with the Sensitive Data, Manage Other Tickets and Manage Settings permissions. To limit what the main site can see, restrict the agent to the mailbox the portal will use. An administrator account also works."
+msgstr "Создайте пользователя WordPress и добавьте его агентом поддержки с правами «Конфиденциальные данные», «Управление чужими заявками» и «Управление настройками». Чтобы ограничить то, что видит основной сайт, ограничьте агента ящиком, который будет использовать портал. Подойдёт и аккаунт администратора."
+
+msgid "On your main site, install and activate the Fluent Support Connector."
+msgstr "На основном сайте установите и активируйте Fluent Support Connector."
+
+msgid "Edit that user (Users > Profile) and create an Application Password. Copy it: WordPress shows it only once."
+msgstr "Откройте этого пользователя (Пользователи > Профиль) и создайте пароль приложения. Скопируйте его: WordPress показывает его только один раз."
+
+msgid "Generate a connection key below. On the main site, open Settings > FluentSupport Client and paste the key with the username and Application Password."
+msgstr "Создайте ключ подключения ниже. На основном сайте откройте Настройки > FluentSupport Client и вставьте ключ вместе с именем пользователя и паролем приложения."
+
+msgid "Remote Portal is switched on or off by FLUENT_SUPPORT_REMOTE_PORTAL in wp-config.php."
+msgstr "Удалённый портал включается и выключается константой FLUENT_SUPPORT_REMOTE_PORTAL в wp-config.php."
+
+msgid "Remove"
+msgstr "Удалить"
+
+msgid "Remove %1$s from %2$s"
+msgstr "Удалить %1$s из %2$s"
+
+msgid "Reopen"
+msgstr "Открыть заново"
+
+msgid "Reopen %s ticket"
+msgstr "Открыть заново заявку (%s)"
+
+msgid "Reopen %s tickets"
+msgstr "Открыть заново заявки (%s)"
+
+msgid "Replying agent's name"
+msgstr "Имя отвечающего агента"
+
+msgid "Resolved in"
+msgstr "Решено за"
+
+msgid "Run %1$s on %2$s"
+msgstr "Запустить %1$s для %2$s"
+
+msgid "Run workflow"
+msgstr "Запустить рабочий процесс"
+
+msgid "Running the \"%s\" workflow will perform the following actions:"
+msgstr "Запуск рабочего процесса «%s» выполнит такие действия:"
+
+msgid "Search agents..."
+msgstr "Поиск агентов…"
+
+msgid "Search tags"
+msgstr "Поиск тегов"
+
+msgid "Select Client Priority"
+msgstr "Выберите приоритет клиента"
+
+msgid "Select Mailbox"
+msgstr "Выберите почтовый ящик"
+
+msgid "Select Status"
+msgstr "Выберите статус"
+
+msgid "Select Tags"
+msgstr "Выберите теги"
+
+msgid "Select the tickets you want to move"
+msgstr "Выберите заявки для переноса"
+
+msgid "Send anyway"
+msgstr "Всё равно отправить"
+
+msgid "Set %1$s to %2$s priority"
+msgstr "Задать для %1$s приоритет %2$s"
+
+msgid "Set in wp-config.php: %s"
+msgstr "Задано в wp-config.php: %s"
+
+msgid "Shortcode copied to clipboard: %s"
+msgstr "Шорткод скопирован: %s"
+
+msgid "Show new replies"
+msgstr "Показать новые ответы"
+
+msgid "Sorry about that. Can you tell us what went wrong?"
+msgstr "Жаль, что так вышло. Расскажете, что пошло не так?"
+
+msgid "Source: %s"
+msgstr "Источник: %s"
+
+msgid "Status: %s"
+msgstr "Статус: %s"
+
+msgid "Stay"
+msgstr "Остаться"
+
+msgid "Support Tickets (%s)"
+msgstr "Заявки в поддержку (%s)"
+
+msgid "Support agent"
+msgstr "Агент поддержки"
+
+msgid "Test connection"
+msgstr "Проверить подключение"
+
+msgid "The connection key expired. Generate a new one."
+msgstr "Срок действия ключа подключения истёк. Создайте новый."
+
+msgid "The main site is connected."
+msgstr "Основной сайт подключён."
+
+msgid "The main site's wp-config.php"
+msgstr "wp-config.php основного сайта"
+
+msgid "The settings could not be loaded."
+msgstr "Не удалось загрузить настройки."
+
+msgid "This is the first ticket on this page."
+msgstr "Это первая заявка на странице."
+
+msgid "This is the last ticket on this page."
+msgstr "Это последняя заявка на странице."
+
+msgid "This removes the tickets with their replies, notes and attachments. It cannot be undone."
+msgstr "Заявки будут удалены вместе с ответами, заметками и вложениями. Отменить это нельзя."
+
+msgid "This site's wp-config.php"
+msgstr "wp-config.php этого сайта"
+
+msgid "This ticket was closed on %1$s by %2$s."
+msgstr "Заявка закрыта %1$s, закрыл %2$s."
+
+msgid "This ticket was closed on %s."
+msgstr "Заявка закрыта %s."
+
+msgid "This workflow will:"
+msgstr "Этот рабочий процесс:"
+
+msgid "Ticket created at %s"
+msgstr "Заявка создана %s"
+
+msgid "Pick a date range and run an audit to get the mood, sentiment score and a one-line summary for every ticket. Tickets that already have a recent audit are skipped automatically."
+msgstr "Выберите период и запустите проверку, чтобы получить настроение, оценку тональности и краткое резюме по каждой заявке. Заявки с недавней проверкой пропускаются автоматически."
+
+msgid "If you use another ticketing plugin such as Awesome Support or Support Candy, you can migrate its tickets from this section."
+msgstr "Если вы пользуетесь другим плагином заявок, например Awesome Support или Support Candy, его заявки можно перенести в этом разделе."
+
+msgid "Tickets that are already closed are skipped. Customers get the ticket closed email if it is turned on for the inbox."
+msgstr "Уже закрытые заявки пропускаются. Клиенты получают письмо о закрытии заявки, если оно включено для ящика."
+
+msgid "Timezone: %s"
+msgstr "Часовой пояс: %s"
+
+msgid "Try again"
+msgstr "Попробовать ещё раз"
+
+msgid "Under a minute"
+msgstr "Меньше минуты"
+
+msgid "Unsent reply"
+msgstr "Неотправленный ответ"
+
+msgid "Use wp-config.php instead"
+msgstr "Использовать wp-config.php"
+
+msgid "Username on this site"
+msgstr "Имя пользователя на этом сайте"
+
+msgid "Viewing snapshot from %1$s at %2$s"
+msgstr "Снимок от %1$s в %2$s"
+
+msgid "Waiting Tickets: %s"
+msgstr "Ждут ответа заявок: %s"
+
+msgid "Waiting Time: %s"
+msgstr "Время ожидания: %s"
+
+msgid "Waiting: %s"
+msgstr "Ожидание: %s"
+
+msgid "Watchers (%s)"
+msgstr "Наблюдатели (%s)"
+
+msgid "You can upload a maximum of %s file."
+msgstr "Можно загрузить не больше %s файла."
+
+msgid "You can upload a maximum of %s files."
+msgstr "Можно загрузить не больше %s файлов."
+
+msgid "Your license expires in %d day"
+msgstr "Лицензия истекает через %d дн."
+
+msgid "Your reply has not been sent. Leave this ticket?"
+msgstr "Ваш ответ не отправлен. Уйти из заявки?"
+
+msgid "The signature is added to emails through the {{agent.signature}} smartcode in your inbox email templates (Inbox Settings > Email Settings). Templates you saved before version 2.4.1 need it added to include the signature."
+msgstr "Подпись добавляется в письма подстановкой {{agent.signature}} в шаблонах писем ящика (Настройки ящика > Настройки писем). В шаблоны, сохранённые до версии 2.4.1, её нужно добавить, чтобы подпись появилась."
+
+msgid "by %s"
+msgstr "от %s"
+
+msgid "expired %d day ago"
+msgstr "истекла %d дн. назад"
+
+msgid "Applies to replies and outreach emails written by an agent. Automatic emails, such as confirmations, always use the inbox name. The email address stays the same, so customer replies still reach this inbox."
+msgstr "Действует для ответов и писем, которые пишет агент. Автоматические письма, например подтверждения, всегда идут от имени ящика. Адрес почты не меняется, поэтому ответы клиентов по-прежнему попадают в этот ящик."
+
+msgid "in %d day"
+msgstr "через %d дн."
+
+msgid "mild fact drift. It will smooth over gaps in the context instead of flagging them."
+msgstr "небольшие отступления от фактов. Пробелы в контексте будут сглажены, а не отмечены."
+
+msgid "score %s"
+msgstr "оценка %s"
+
+msgid "via %s"
+msgstr "через %s"
+
+msgid "If you still need help with this issue, reopen the ticket and reply."
+msgstr "Если вам всё ещё нужна помощь по этому вопросу, откройте заявку заново и ответьте."
+
+msgid "Ticket number:"
+msgstr "Номер заявки:"
+
+msgid "Waiting for your reply"
+msgstr "Ждём вашего ответа"
+
+msgid "Your code is %s"
+msgstr "Ваш код: %s"
+
+msgid "This email was sent by Fluent Support. Site: %s"
+msgstr "Это письмо отправлено службой поддержки. Сайт: %s"
+
