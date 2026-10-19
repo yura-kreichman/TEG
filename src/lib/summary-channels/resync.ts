@@ -11,7 +11,8 @@ import {
 import { sendPushToTenant } from "@/lib/push-notifications";
 import { formatCollectionAlertTelegram, formatShiftCloseSummaryTelegram } from "./telegram-format";
 import { notifyDailyCashLateSubmission } from "./daily-cash-trigger";
-import { pointNameIfMany } from "./dispatch";
+import { dispatchShiftCloseSummary, pointNameIfMany } from "./dispatch";
+import type { ShiftCloseSummaryData } from "./types";
 
 /**
  * Пересборка уже отправленных Telegram-сообщений после правки (требование
@@ -252,14 +253,90 @@ export async function resyncAfterMoneyOpChange(op: {
 }
 
 /**
+ * Данные сводки "Закрытие смены", собранные заново из самой смены (а не
+ * дельтой): ставка на дату смены, суммы из привязанных операций, "к выдаче" —
+ * текущий скользящий баланс сотрудника, он к этому моменту мог измениться и
+ * по другим причинам. Оба места, куда приходят только действия владельца, —
+ * правка уже отправленного сообщения и первая отправка, когда смену закрыл
+ * владелец, — собирают их здесь, отсюда и ♛ рядом с именем.
+ */
+async function buildOwnerShiftCloseSummaryData(shift: {
+  id: string;
+  pointId: string;
+  startAt: Date;
+  endAt: Date;
+  operator: { id: string; name: string; colorTag: string | null; tenantId: string };
+}): Promise<ShiftCloseSummaryData> {
+  const linkedOps = await prisma.moneyOperation.findMany({
+    where: { shiftId: shift.id, type: { in: WORK_TIME_MONEY_TYPES } },
+    select: { type: true, amount: true },
+  });
+  const rate = await getRateForDate(shift.operator.id, shift.startAt);
+  const { minutes, accrued } = calcShiftAccrual(shift.startAt, shift.endAt, rate);
+  const sumOf = (type: string) =>
+    linkedOps.filter((o) => o.type === type).reduce((sum, o) => sum + Math.abs(Number(o.amount)), 0);
+  const bonusPayout = sumOf("bonus_payout");
+  const bonusAccrual = sumOf("bonus_accrual");
+  const balance = await calcOperatorBalance(shift.operator.id);
+
+  return {
+    // Точка отдельной строкой, когда их несколько (правило владельца 2026-08-17).
+    pointName: await pointNameIfMany(
+      shift.operator.tenantId,
+      (await prisma.point.findUnique({ where: { id: shift.pointId }, select: { name: true } }))?.name ?? null
+    ),
+    editedByOwner: true,
+    operatorName: shift.operator.name,
+    operatorColorTag: shift.operator.colorTag,
+    startAt: shift.startAt,
+    endAt: shift.endAt,
+    minutes,
+    rate,
+    accrued,
+    advanceAmount: sumOf("advance"),
+    bonusAmount: bonusPayout + bonusAccrual,
+    // Тот же признак, что при отправке: премия начислена в баланс, а не
+    // выдана наличными (docs/spec/05-work-time.md, режим "accrual").
+    bonusIsAccrual: bonusAccrual > 0 && bonusPayout === 0,
+    toPayOut: balance.toPayOut,
+  };
+}
+
+/**
+ * Первая сводка "Закрытие смены" для смены, которую закрыл ВЛАДЕЛЕЦ в
+ * кабинете: сотрудник не нажал "Закончить смену" (или забыл начать её утром),
+ * и время поставил владелец. Правка владельца раньше только догоняла уже
+ * отправленное сообщение (resyncShiftCloseMessage), а у открытой смены его
+ * нет — в чат не уходило ничего (запрос пользователя 2026-10-19, Керен Центр,
+ * 16.10). Тот же диспетчер, что у check-out: Telegram, email и Push.
+ */
+export async function announceShiftClosedByOwner(shiftId: string): Promise<void> {
+  try {
+    const shift = await prisma.shift.findUnique({
+      where: { id: shiftId },
+      include: { operator: { select: { id: true, name: true, colorTag: true, tenantId: true } } },
+    });
+    // Сообщение уже есть (сотрудник успел закрыть смену сам) — его догонит
+    // обычная правка, второе слать нельзя.
+    if (!shift?.endAt || shift.telegramSummaryMessageId) return;
+
+    const tenantId = shift.operator.tenantId;
+    const settings =
+      (await prisma.shiftCloseSummarySettings.findUnique({ where: { tenantId } })) ?? SHIFT_CLOSE_SUMMARY_DEFAULTS;
+    if (!settings.enabled) return;
+
+    const data = await buildOwnerShiftCloseSummaryData({ ...shift, endAt: shift.endAt });
+    const results = await dispatchShiftCloseSummary(tenantId, data, settings);
+    await rememberShiftSummaryMessage(shift.id, results);
+  } catch (err) {
+    console.error("shift close announce failed", { shiftId, err });
+  }
+}
+
+/**
  * Сводка "Закрытие смены". Отправляется в момент закрытия, а правится позже
  * тремя разными путями: владелец меняет время смены, правит привязанный к ней
  * аванс/премию или удаляет их. Все три ведут сюда.
- *
- * Пересобираем данные заново из смены (а не подставляем дельту): ставка
- * берётся на дату смены, суммы — из привязанных операций, "к выдаче" — это
- * текущий скользящий баланс сотрудника, он к моменту правки мог измениться и
- * по другим причинам.
  */
 export async function resyncShiftCloseMessage(
   shiftId: string,
@@ -273,54 +350,21 @@ export async function resyncShiftCloseMessage(
     if (!shift?.telegramSummaryMessageId || !shift.endAt) return;
 
     const tenantId = shift.operator.tenantId;
-    const [channel, tenant, settingsRow, linkedOps] = await Promise.all([
+    const [channel, tenant, settingsRow] = await Promise.all([
       prisma.tenantSummaryChannel.findFirst({
         where: { tenantId, channelType: "telegram", pointId: null, enabled: true, chatStatus: "active" },
       }),
       prisma.tenant.findUnique({ where: { id: tenantId }, select: { locale: true, timezone: true } }),
       prisma.shiftCloseSummarySettings.findUnique({ where: { tenantId } }),
-      prisma.moneyOperation.findMany({
-        where: { shiftId, type: { in: WORK_TIME_MONEY_TYPES } },
-        select: { type: true, amount: true },
-      }),
     ]);
     if (!channel?.chatId) return;
 
     const settings = settingsRow ?? SHIFT_CLOSE_SUMMARY_DEFAULTS;
     if (!settings.enabled) return;
 
-    const rate = await getRateForDate(shift.operator.id, shift.startAt);
-    const { minutes, accrued } = calcShiftAccrual(shift.startAt, shift.endAt, rate);
-    const sumOf = (type: string) =>
-      linkedOps.filter((o) => o.type === type).reduce((sum, o) => sum + Math.abs(Number(o.amount)), 0);
-    const bonusPayout = sumOf("bonus_payout");
-    const bonusAccrual = sumOf("bonus_accrual");
-    const balance = await calcOperatorBalance(shift.operator.id);
-
     const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
     const text = formatShiftCloseSummaryTelegram(
-      {
-        // Точка отдельной строкой, когда их несколько (правило владельца 2026-08-17).
-        pointName: await pointNameIfMany(
-          tenantId,
-          (await prisma.point.findUnique({ where: { id: shift.pointId }, select: { name: true } }))?.name ?? null
-        ),
-        // Сюда приходят только правки владельца — отсюда ♛ рядом с именем.
-        editedByOwner: true,
-        operatorName: shift.operator.name,
-        operatorColorTag: shift.operator.colorTag,
-        startAt: shift.startAt,
-        endAt: shift.endAt,
-        minutes,
-        rate,
-        accrued,
-        advanceAmount: sumOf("advance"),
-        bonusAmount: bonusPayout + bonusAccrual,
-        // Тот же признак, что при отправке: премия начислена в баланс, а не
-        // выдана наличными (docs/spec/05-work-time.md, режим "accrual").
-        bonusIsAccrual: bonusAccrual > 0 && bonusPayout === 0,
-        toPayOut: balance.toPayOut,
-      },
+      await buildOwnerShiftCloseSummaryData({ ...shift, endAt: shift.endAt }),
       settings,
       locale,
       tenant?.timezone ?? "UTC",

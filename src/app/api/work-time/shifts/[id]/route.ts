@@ -13,7 +13,12 @@ import { sendPushToOperators } from "@/lib/push-notifications";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { resettlePayoutToZones } from "@/lib/zone-balance";
-import { resyncDailyCashForPoint, resyncShiftCloseMessage } from "@/lib/summary-channels/resync";
+import {
+  announceShiftClosedByOwner,
+  resyncDailyCashForPoint,
+  resyncShiftCloseMessage,
+} from "@/lib/summary-channels/resync";
+import { onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
 import { getShiftEditWindow } from "@/lib/edit-window";
 
 // Аудит 2026-07-27, второй раунд — см. комментарий у повторной проверки
@@ -434,12 +439,31 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
 
   // Сводка "Закрытие смены" в чате и "Касса за день" точки содержат эти же
   // часы и суммы — догоняем их (требование владельца 2026-08-16).
-  await resyncShiftCloseMessage(id);
+  //
+  // Владелец закрыл ОТКРЫТУЮ смену (сотрудник не нажал "Закончить смену") —
+  // догонять нечего, сообщения о ней ещё нет: отправляем первое (запрос
+  // пользователя 2026-10-19).
+  const closedByOwner = shift.endAt === null && nextEndAt !== null;
+  if (closedByOwner) {
+    await announceShiftClosedByOwner(id);
+  } else {
+    await resyncShiftCloseMessage(id);
+  }
   // Момент КОНЦА смены, а не начала: часов смены в "Кассе за день" нет вовсе,
   // её задевают только аванс/премия — а они датируются концом смены (и при
   // check-out, и в syncLinkedOp выше). У ночной смены начало и конец лежат в
   // разных бизнес-днях, и прежний nextStartAt обновлял не ту сводку.
   await resyncDailyCashForPoint(shift.pointId, owner.tenantId, nextEndAt ?? nextStartAt);
+  // Как при check-out: закрытие смены могло быть последним, чего ждала ПЕРВАЯ
+  // отправка "Кассы за день". Строго ПОСЛЕ resync выше: тот обновляет только
+  // уже отправленную, этот отправляет только неотправленную — в обратном
+  // порядке свежая сводка тут же ушла бы ещё раз как досдача (второе письмо
+  // и второй Push).
+  if (closedByOwner) {
+    await onShiftClosed(shift.pointId, owner.tenantId, nextStartAt).catch((err) =>
+      console.error("daily cash on-shift-closed notify failed", err)
+    );
+  }
 
   return NextResponse.json({
     shift: {
