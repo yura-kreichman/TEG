@@ -1318,7 +1318,8 @@
       "ticketsSub": "ჩვენებები საჭირო არ არის — შემოსავალი გამოითვლება გაყიდული შეკვეთების მიხედვით",
       "gameRoomBlockedPrefix": "დაასრულე",
       "gameRoomBlockedSuffix": "აქტიური გაშვება:",
-      "gameRoomGoToAssetButton": "აქტივზე გადასვლა"
+      "gameRoomGoToAssetButton": "აქტივზე გადასვლა",
+      "gameRoomCarriedOver": "«{asset}»: ჯერ კიდევ მიმდინარეობს გაშვებები ({count}). მათი გადახდა შევა შედეგების შემდეგ ჩაბარებაში."
     },
     "offlineQueueHint": "ელოდება გაგზავნას: {count} ჩაბარება — ავტომატურად წავა კავშირის აღდგენისას",
     "offlineQueueDroppedHint": "რიგში მდგარი {count} ჩაბარება სერვერმა უარყო და დაიკარგა — შეიყვანეთ ხელახლა",

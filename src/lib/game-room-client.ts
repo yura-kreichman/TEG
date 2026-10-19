@@ -23,6 +23,17 @@ function roundToWholeCurrencyUnit(amount: number): number {
   return remainderCents >= 50 ? wholeUnits + 1 : wholeUnits;
 }
 
+/**
+ * Мешает ли пуск сдать итоги зоны — клиентская копия правила
+ * countSubmissionBlockingLaunches (src/lib/game-room.ts), менять вместе.
+ * Строки приходят из GET /api/zones/[id]/launches: там только идущие и
+ * "замороженные" (isOpen:false, ждут способ оплаты). Идущий «По факту» сдаче
+ * не мешает: его оплата войдёт в следующую сдачу.
+ */
+export function blocksResultsSubmission(launch: { isOpen: boolean; pricingMode: string }): boolean {
+  return !launch.isOpen || launch.pricingMode !== "per_minute";
+}
+
 export function estimateLiveAmount(
   pricingMode: LaunchPricingMode,
   priceSnapshot: number,

@@ -1318,7 +1318,8 @@
       "ticketsSub": "Көрсөткүчтөр керек эмес — түшүм сатылган буйрутмалар боюнча эсептелет",
       "gameRoomBlockedPrefix": "Аякта",
       "gameRoomBlockedSuffix": "активдүү пусктар:",
-      "gameRoomGoToAssetButton": "Активге өтүү"
+      "gameRoomGoToAssetButton": "Активге өтүү",
+      "gameRoomCarriedOver": "«{asset}»: дагы эле жүрүп жаткан пусктар бар ({count}). Алардын төлөмү кийинки жыйынтык тапшырууга кирет."
     },
     "offlineQueueHint": "Жөнөтүүнү күтүүдө: {count} тапшыруу — байланыш болгондо автоматтык түрдө жөнөтүлөт",
     "offlineQueueDroppedHint": "{count} кезектеги тапшыруу сервер тарабынан четке кагылды жана жоголду — кайра киргизиңиз",

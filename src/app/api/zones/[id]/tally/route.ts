@@ -3,10 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import {
   LAUNCH_PAYMENT_METHODS,
+  LAUNCH_TIMING_TX_OPTIONS,
   countOpenLaunches,
   findOperatorLaunchesZone,
   gameRoomRevenueByAsset,
   launchesRevenueByAssetAndTariff,
+  lockZoneLaunchTiming,
   previousSubmissionBoundary,
 } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
@@ -167,10 +169,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     }
   }
 
-  const now = new Date();
   let launch;
   try {
     launch = await prisma.$transaction(async (tx) => {
+      // Лок зоны, общий со сдачей итогов, и время тапа уже после него
+      // (lockZoneLaunchTiming): мгновенный тап сразу закрыт (endedAt = now),
+      // и тап, посчитанный до сдачи, а записанный после неё, не попал бы ни
+      // в эту сдачу, ни в следующую. Порядок «зона, потом актив» — обратного
+      // нигде нет.
+      await lockZoneLaunchTiming(tx, zone.id);
+      const now = new Date();
       if (isTimed) {
         // Актив держит не больше одного открытого таймерного пуска разом
         // (запрос пользователя 2026-07-28: "машинка физически одна и катает
@@ -240,7 +248,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       }
 
       return created;
-    });
+    }, LAUNCH_TIMING_TX_OPTIONS);
   } catch (err) {
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });

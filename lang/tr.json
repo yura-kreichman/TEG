@@ -1318,7 +1318,8 @@
       "ticketsSub": "Okuma girmeye gerek yok — gelir satılan siparişlerden hesaplanır",
       "gameRoomBlockedPrefix": "Tamamla",
       "gameRoomBlockedSuffix": "aktif başlatma:",
-      "gameRoomGoToAssetButton": "Varlığa git"
+      "gameRoomGoToAssetButton": "Varlığa git",
+      "gameRoomCarriedOver": "«{asset}»: devam eden başlatmalar var ({count}). Ödemeleri bir sonraki sonuç teslimine girecek."
     },
     "offlineQueueHint": "Gönderim bekleyen: {count} teslim — bağlantı gelince otomatik gönderilecek",
     "offlineQueueDroppedHint": "Sırada bekleyen {count} teslim sunucu tarafından reddedildi ve kayboldu — lütfen yeniden girin",

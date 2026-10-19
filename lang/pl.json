@@ -1318,7 +1318,8 @@
       "ticketsSub": "Odczyty nie są potrzebne — przychód liczony jest ze sprzedanych zamówień",
       "gameRoomBlockedPrefix": "Zakończ",
       "gameRoomBlockedSuffix": "aktywnych startów w",
-      "gameRoomGoToAssetButton": "Przejdź do aktywu"
+      "gameRoomGoToAssetButton": "Przejdź do aktywu",
+      "gameRoomCarriedOver": "«{asset}»: wciąż trwają starty ({count}). Ich opłata wejdzie do kolejnego zdania wyników."
     },
     "offlineQueueHint": "Oczekują na wysłanie: {count} rozliczeń — zostaną wysłane automatycznie po połączeniu",
     "offlineQueueDroppedHint": "{count} rozliczenie(a) w kolejce zostały odrzucone przez serwer i utracone — wprowadź je ponownie",

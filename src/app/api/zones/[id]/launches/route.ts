@@ -5,11 +5,13 @@ import { requireOperator } from "@/lib/require-operator";
 import {
   LAUNCH_PAYMENT_METHODS,
   LAUNCH_LOCK_TIMEOUT_MS,
+  LAUNCH_TIMING_TX_OPTIONS,
   MAX_PARALLEL_LAUNCHES,
   countOpenLaunches,
   findOperatorStaysZone,
   gameRoomRevenueByAsset,
   getAssetTariff,
+  lockZoneLaunchTiming,
   nextLaunchNumber,
   previousSubmissionBoundary,
 } from "@/lib/game-room";
@@ -47,11 +49,15 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/l
   // сумму рано и не оплачивать её, забирая разницу мимо кассы, пока ребёнок
   // физически продолжает играть). Та же защита есть в /stop на случай, если
   // клиент успел отправить оплату буквально в момент истечения.
+  // voidedAt:null — аннулированный идущий пуск лежит так же (isOpen:false,
+  // paymentMethod:null, см. void/route.ts) и без фильтра воскресал бы здесь
+  // через 30 секунд как идущий.
   await prisma.launch.updateMany({
     where: {
       zoneId: zone.id,
       isOpen: false,
       paymentMethod: null,
+      voidedAt: null,
       endedAt: { lt: new Date(Date.now() - LAUNCH_LOCK_TIMEOUT_MS) },
     },
     data: { isOpen: true, endedAt: null, amount: null, endedByOperatorId: null },
@@ -63,7 +69,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/l
   // показывать (не как идущие, а с зафиксированной суммой), иначе оператор
   // теряет их из виду до следующей перезагрузки/сдачи итогов.
   const launches = await prisma.launch.findMany({
-    where: { zoneId: zone.id, OR: [{ isOpen: true }, { isOpen: false, paymentMethod: null }] },
+    where: { zoneId: zone.id, voidedAt: null, OR: [{ isOpen: true }, { isOpen: false, paymentMethod: null }] },
     orderBy: { startedAt: "asc" },
     include: { linkedClientWallet: { select: { id: true, phone: true, name: true, balance: true } } },
   });
@@ -148,7 +154,6 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     return NextResponse.json({ error: "Выберите актив" }, { status: 400 });
   }
 
-  const now = new Date();
   const pricing = await getAssetTariff(assetId);
   if (!pricing || !pricing.pricingMode) {
     return NextResponse.json({ error: "Тариф этого актива ещё не задан владельцем" }, { status: 400 });
@@ -243,6 +248,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   let launch;
   try {
     launch = await prisma.$transaction(async (tx) => {
+      // Лок зоны, общий со сдачей итогов (lockZoneLaunchTiming), и время
+      // старта уже после него: идущий «За вход» блокирует сдачу, и сдача
+      // обязана его увидеть, если он начался раньше неё. Порядок «зона, потом
+      // актив» (nextLaunchNumber ниже) — обратного нигде нет.
+      await lockZoneLaunchTiming(tx, zone.id);
+      const now = new Date();
       const number = await nextLaunchNumber(tx, assetId);
       // Тот же лок по assetId, что уже взят строкой выше (nextLaunchNumber) —
       // проверка лимита теперь видит актуальный count, а не устаревший.
@@ -306,7 +317,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       }
 
       return created;
-    });
+    }, LAUNCH_TIMING_TX_OPTIONS);
   } catch (err) {
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });

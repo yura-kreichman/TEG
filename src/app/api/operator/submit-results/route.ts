@@ -17,7 +17,7 @@ import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
 import {
   aggregateGameRoomLaunches,
-  countOpenLaunchesInZone,
+  countSubmissionBlockingLaunches,
   gameRoomRevenueByAsset,
   previousSubmissionBoundary,
 } from "@/lib/game-room";
@@ -179,16 +179,17 @@ export async function POST(request: Request) {
   }
 
   // Мягкая блокировка (docs/spec/04-game-room.md, "Деньги и сдача итогов") —
-  // сдача по зоне "Прибываний" недоступна, пока в ней есть открытые пуски, без
-  // обхода. С 2026-07-28 то же верно и для "Пусков" с таймерными тарифами
-  // (запрос пользователя: "10 руб. за 10 минут" — та же механика "За вход",
-  // открытый пуск должен быть завершён/освобождён до сдачи, иначе его сумма
-  // никогда не попадёт ни в один агрегат). Проверяем ДО тяжёлого расчёта
-  // ниже, чтобы не тратить его впустую.
+  // сдача по зоне "Прибываний" недоступна, пока в ней идёт «За вход» или
+  // пуск ждёт способ оплаты, без обхода. С 2026-07-28 то же верно и для
+  // "Пусков" с таймерными тарифами (запрос пользователя: "10 руб. за 10
+  // минут" — та же механика "За вход"). Идущий «По факту» сдаче не мешает
+  // (пересменка, 2026-10-19) — правило и причины у
+  // countSubmissionBlockingLaunches. Проверяем ДО тяжёлого расчёта ниже,
+  // чтобы не тратить его впустую.
   for (const zs of zoneSubmissions) {
     const zone = zoneById.get(zs.zoneId)!;
     if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
-    const openCount = await countOpenLaunchesInZone(zone.id);
+    const openCount = await countSubmissionBlockingLaunches(zone.id);
     if (openCount > 0) {
       return NextResponse.json(
         { error: `Заверши ${openCount} активных пуск${openCount === 1 ? "" : "ов"} в зоне «${zone.name}»` },
@@ -239,8 +240,9 @@ export async function POST(request: Request) {
     // начало окна» и из прироста вычитается — это и есть минус из воздуха
     // (жалоба КидсБурга 2026-09-02, которую чинил сам overdraw).
     // Порядок «сначала точка, потом зона» — общий по проекту; обратного
-    // порядка захвата в коде нет (hashtext(zoneId) встречается только здесь),
-    // так что deadlock этот лок не добавляет.
+    // порядка захвата в коде нет (hashtext(zoneId) берут ещё билеты и пуски,
+    // lockZoneLaunchTiming, — оба без лока точки), так что deadlock этот лок
+    // не добавляет.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
 
     // Сортировка — фиксированный порядок захвата локов исключает deadlock
@@ -261,11 +263,13 @@ export async function POST(request: Request) {
     // только теоретически (окно расширяется тяжёлой работой транзакции для
     // мультизонных сдач). Дублирования расчёта не происходит — просто читаем
     // тот же count ещё раз, теперь уже под локом, который гарантирует, что
-    // никакой конкурентный старт пуска эту проверку больше не обгонит.
+    // никакой конкурентный старт пуска эту проверку больше не обгонит:
+    // старт, «заморозка» и остановка пуска берут тот же лок зоны
+    // (lockZoneLaunchTiming) и ставят своё время уже после него.
     for (const zoneId of zoneIds) {
       const zone = zoneById.get(zoneId)!;
       if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
-      const openCount = await countOpenLaunchesInZone(zoneId, tx);
+      const openCount = await countSubmissionBlockingLaunches(zoneId, tx);
       if (openCount > 0) {
         throw new OpenLaunchesRaceError(zone.name, openCount);
       }

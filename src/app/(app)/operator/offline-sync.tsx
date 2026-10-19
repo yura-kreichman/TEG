@@ -3,41 +3,17 @@
 import { useEffect, useState } from "react";
 import { CloudOff, TriangleAlert } from "lucide-react";
 import {
+  DROPPED_SUBMISSIONS_EVENT,
+  OFFLINE_QUEUE_FLUSHED_EVENT,
   flushPendingSubmissions,
   getPendingSubmissions,
+  loadDroppedSubmissions,
+  rememberDroppedSubmissions,
   requestPersistentStorage,
+  saveDroppedSubmissions,
   type DroppedSubmission,
 } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
-
-// Ключ localStorage для "dropped" (аудит 2026-07-27, второй раунд, реальная
-// дыра) — раньше это был голый useState([]), ничем не подкреплённый на
-// диске: к моменту, когда сдача попадает в "dropped", она УЖЕ удалена из
-// IndexedDB-очереди (flushPendingSubmissions это делает сама) — единственная
-// оставшаяся запись о том, что данные потеряны, жила только в памяти этой
-// вкладки. Перезапуск PWA/питание планшета точки за выходные (тот же
-// сценарий, что у самого 401-бага рядом) стирал предупреждение полностью,
-// прежде чем кто-то успевал его увидеть — при том, что комментарий ниже
-// прямо объявляет целью "не даём случайно потерять из виду".
-const DROPPED_STORAGE_KEY = "rentos-offline-dropped-submissions";
-
-function loadStoredDropped(): DroppedSubmission[] {
-  try {
-    const raw = localStorage.getItem(DROPPED_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as DroppedSubmission[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredDropped(items: DroppedSubmission[]) {
-  try {
-    localStorage.setItem(DROPPED_STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    // Хранилище недоступно/переполнено — предупреждение всё равно останется
-    // видно в текущей сессии через state, просто не переживёт перезагрузку.
-  }
-}
 
 /**
  * Фоновая синхронизация офлайн-очереди сдач итогов (src/lib/offline-submissions.ts).
@@ -56,19 +32,22 @@ export function OfflineSync() {
   // единого сигнала, вся касса/показания/расходы терялись безвозвратно.
   // Держим список, пока оператор сам не закроет — данные всё равно
   // потеряны, важно, чтобы это заметили и ввели заново вручную. Теперь
-  // синхронизирован с localStorage (DROPPED_STORAGE_KEY выше) — переживает
-  // перезагрузку/перезапуск PWA, не только текущую вкладку.
+  // синхронизирован с localStorage (loadDroppedSubmissions) — переживает
+  // перезагрузку/перезапуск PWA, не только текущую вкладку. Перечитывается и
+  // по событию: отказы при отправке очереди из "Сменить сотрудника" пишутся
+  // туда же.
   const [dropped, setDropped] = useState<DroppedSubmission[]>([]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setDropped(loadStoredDropped());
+    const reload = () => setDropped(loadDroppedSubmissions());
+    reload();
+    window.addEventListener(DROPPED_SUBMISSIONS_EVENT, reload);
+    return () => window.removeEventListener(DROPPED_SUBMISSIONS_EVENT, reload);
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   function dismissDropped() {
     setDropped([]);
-    saveStoredDropped([]);
+    saveDroppedSubmissions([]);
   }
 
   // Один раз при старте PWA — просим браузер не вычищать нашу IndexedDB сам
@@ -84,18 +63,17 @@ export function OfflineSync() {
     async function sync() {
       const result = await flushPendingSubmissions();
       setPendingCount(result.remaining);
-      if (result.dropped.length > 0) {
-        setDropped((prev) => {
-          const next = [...prev, ...result.dropped];
-          saveStoredDropped(next);
-          return next;
-        });
-      }
+      rememberDroppedSubmissions(result.dropped);
     }
-    getPendingSubmissions().then((items) => setPendingCount(items.length));
+    const refreshCount = () => getPendingSubmissions().then((items) => setPendingCount(items.length));
+    refreshCount();
     sync();
     window.addEventListener("online", sync);
-    return () => window.removeEventListener("online", sync);
+    window.addEventListener(OFFLINE_QUEUE_FLUSHED_EVENT, refreshCount);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener(OFFLINE_QUEUE_FLUSHED_EVENT, refreshCount);
+    };
   }, []);
 
   return (

@@ -27,6 +27,7 @@ import {
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
+import { blocksResultsSubmission } from "@/lib/game-room-client";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
@@ -177,6 +178,11 @@ export default function SubmitResultsPage() {
   // переходом на Актуальный Актив") — зона может держать несколько активов,
   // сообщение и переход должны вести сразу к нужному, а не к зоне вообще.
   const [gameRoomOpenByAsset, setGameRoomOpenByAsset] = useState<{ assetId: string; count: number }[]>([]);
+  // Идущие «По факту» — сдачу НЕ блокируют (пересменка, запрос пользователя
+  // 2026-10-19): их оплата войдёт в следующую сдачу, тому, кто остановит.
+  // Только серая строка-пояснение, чтобы сотрудник не искал этих денег в
+  // своём ящике. Правило "что блокирует" — blocksResultsSubmission.
+  const [gameRoomCarriedOverByAsset, setGameRoomCarriedOverByAsset] = useState<{ assetId: string; count: number }[]>([]);
   // Расчётная выручка "Прибываний" по каждому активу отдельно (запрос
   // пользователя 2026-07-17: "внутри актива... сумма расчётная как read
   // only, сотрудник вносит реальные суммы — так мы узнаем есть ли
@@ -346,11 +352,14 @@ export default function SubmitResultsPage() {
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           const openCounts = new Map<string, number>();
+          const carriedOverCounts = new Map<string, number>();
           for (const l of data?.launches ?? []) {
             if (!l.assetId) continue;
-            openCounts.set(l.assetId, (openCounts.get(l.assetId) ?? 0) + 1);
+            const target = blocksResultsSubmission(l) ? openCounts : carriedOverCounts;
+            target.set(l.assetId, (target.get(l.assetId) ?? 0) + 1);
           }
           setGameRoomOpenByAsset(Array.from(openCounts, ([assetId, count]) => ({ assetId, count })));
+          setGameRoomCarriedOverByAsset(Array.from(carriedOverCounts, ([assetId, count]) => ({ assetId, count })));
           setGameRoomRevenueByAsset(data?.revenueByAsset ?? []);
         });
       return;
@@ -996,6 +1005,18 @@ export default function SubmitResultsPage() {
                       </Button>
                     </PressableScale>
                   </div>
+                );
+              })}
+
+            {isStaysZone(activeZone) &&
+              gameRoomCarriedOverByAsset.map((entry) => {
+                const asset = activeZone.assets.find((a) => a.id === entry.assetId);
+                return (
+                  <p key={`carried-${entry.assetId}`} className="text-caption-airbnb text-muted-foreground">
+                    {t.operatorApp.submit.gameRoomCarriedOver
+                      .replace("{asset}", asset?.name ?? "")
+                      .replace("{count}", String(entry.count))}
+                  </p>
                 );
               })}
 

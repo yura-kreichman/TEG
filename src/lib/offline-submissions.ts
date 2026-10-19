@@ -117,6 +117,47 @@ export interface DroppedSubmission {
   error: string;
 }
 
+// Ключ localStorage для "dropped" (аудит 2026-07-27, второй раунд, реальная
+// дыра) — раньше это был голый useState([]), ничем не подкреплённый на
+// диске: к моменту, когда сдача попадает в "dropped", она УЖЕ удалена из
+// IndexedDB-очереди (flushPendingSubmissions это делает сама) — единственная
+// оставшаяся запись о том, что данные потеряны, жила только в памяти этой
+// вкладки. Перезапуск PWA/питание планшета точки за выходные (тот же
+// сценарий, что у самого 401-бага рядом) стирал предупреждение полностью,
+// прежде чем кто-то успевал его увидеть.
+//
+// Живёт здесь, а не в OfflineSync: очередь отправляет ещё и кнопка "Сменить
+// сотрудника" (operator-switch-button.tsx), и её отказы должны попасть в то
+// же предупреждение. Событие — чтобы уже открытый OfflineSync перечитал
+// список сразу, а не после перезагрузки.
+const DROPPED_STORAGE_KEY = "rentos-offline-dropped-submissions";
+export const DROPPED_SUBMISSIONS_EVENT = "rentos:offline-dropped-submissions";
+export const OFFLINE_QUEUE_FLUSHED_EVENT = "rentos:offline-queue-flushed";
+
+export function loadDroppedSubmissions(): DroppedSubmission[] {
+  try {
+    const raw = localStorage.getItem(DROPPED_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as DroppedSubmission[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveDroppedSubmissions(items: DroppedSubmission[]) {
+  try {
+    localStorage.setItem(DROPPED_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // Хранилище недоступно/переполнено — предупреждение всё равно останется
+    // видно в текущей сессии через state, просто не переживёт перезагрузку.
+  }
+}
+
+export function rememberDroppedSubmissions(items: DroppedSubmission[]) {
+  if (items.length === 0) return;
+  saveDroppedSubmissions([...loadDroppedSubmissions(), ...items]);
+  window.dispatchEvent(new Event(DROPPED_SUBMISSIONS_EVENT));
+}
+
 export async function flushPendingSubmissions(): Promise<{
   sent: number;
   remaining: number;
@@ -169,5 +210,8 @@ export async function flushPendingSubmissions(): Promise<{
     }
   }
   const remaining = (await getPendingSubmissions()).length;
+  // Отправлять очередь может не только OfflineSync (см. operator-switch-
+  // button.tsx) — пусть его счётчик "ждут отправки" обновится сразу.
+  window.dispatchEvent(new Event(OFFLINE_QUEUE_FLUSHED_EVENT));
   return { sent, remaining, dropped };
 }

@@ -1318,7 +1318,8 @@
       "ticketsSub": "No readings needed — revenue is calculated from sold orders",
       "gameRoomBlockedPrefix": "Finish",
       "gameRoomBlockedSuffix": "active launches in",
-      "gameRoomGoToAssetButton": "Go to asset"
+      "gameRoomGoToAssetButton": "Go to asset",
+      "gameRoomCarriedOver": "«{asset}»: launches still running ({count}). Their payment will go into the next results submission."
     },
     "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online",
     "offlineQueueDroppedHint": "{count} queued submission(s) were rejected by the server and lost — please re-enter them manually",

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { computeLaunchAmount, roundToWholeCurrencyUnit, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room";
+import {
+  computeLaunchAmount,
+  lockZoneLaunchTiming,
+  roundToWholeCurrencyUnit,
+  LAUNCH_TIMING_TX_OPTIONS,
+  type LaunchPricingMode,
+  type LaunchRoundingMode,
+} from "@/lib/game-room";
 
 class LaunchNotOpenError extends Error {}
 
@@ -43,34 +50,39 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/launches/[
     return NextResponse.json({ error: "Не применимо для этого тарифа" }, { status: 400 });
   }
 
-  const endedAt = new Date();
-  let amount = computeLaunchAmount(
-    {
-      pricingMode: launch.pricingMode as LaunchPricingMode,
-      priceSnapshot: launch.priceSnapshot,
-      durationMinutesSnapshot: launch.durationMinutesSnapshot,
-      roundingModeSnapshot: launch.roundingModeSnapshot as LaunchRoundingMode | null,
-      minAmountSnapshot: launch.minAmountSnapshot,
-    },
-    launch.startedAt,
-    endedAt
-  );
-  if (launch.zone.amountRoundingEnabled) {
-    amount = roundToWholeCurrencyUnit(amount);
-  }
-
   let updated;
   try {
     // CAS — двойной тап "Точно?" не должен зафиксировать endedAt дважды
     // разным временем (тот же класс гонки, что уже был у /stop).
     updated = await prisma.$transaction(async (tx) => {
+      // Время — только ПОСЛЕ лока зоны, общего со сдачей итогов (пересменка
+      // 2026-10-19, разбор у lockZoneLaunchTiming). Заморозка, посчитанная
+      // до сдачи и записанная после неё, дала бы endedAt раньше границы этой
+      // сдачи — пуск, оплаченный следующим сотрудником, не попал бы ни в одну.
+      await lockZoneLaunchTiming(tx, launch.zoneId);
+      const endedAt = new Date();
+      let amount = computeLaunchAmount(
+        {
+          pricingMode: launch.pricingMode as LaunchPricingMode,
+          priceSnapshot: launch.priceSnapshot,
+          durationMinutesSnapshot: launch.durationMinutesSnapshot,
+          roundingModeSnapshot: launch.roundingModeSnapshot as LaunchRoundingMode | null,
+          minAmountSnapshot: launch.minAmountSnapshot,
+        },
+        launch.startedAt,
+        endedAt
+      );
+      if (launch.zone.amountRoundingEnabled) {
+        amount = roundToWholeCurrencyUnit(amount);
+      }
+
       const result = await tx.launch.updateMany({
         where: { id, isOpen: true },
         data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id },
       });
       if (result.count === 0) throw new LaunchNotOpenError();
       return tx.launch.findUniqueOrThrow({ where: { id } });
-    });
+    }, LAUNCH_TIMING_TX_OPTIONS);
   } catch (err) {
     if (err instanceof LaunchNotOpenError) {
       return NextResponse.json({ error: "Пуск уже остановлен" }, { status: 409 });

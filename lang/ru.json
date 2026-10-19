@@ -1359,7 +1359,8 @@
       "ticketsSub": "Показания не нужны — выручка считается по проданным заказам",
       "gameRoomBlockedPrefix": "Заверши",
       "gameRoomBlockedSuffix": "активных пусков в",
-      "gameRoomGoToAssetButton": "Перейти к активу"
+      "gameRoomGoToAssetButton": "Перейти к активу",
+      "gameRoomCarriedOver": "«{asset}»: ещё идут пуски ({count}). Их оплата войдёт в следующую сдачу итогов."
     },
     "offlineQueueHint": "Ждут отправки: {count} сдач(и) — уйдут автоматически при связи",
     "offlineQueueDroppedHint": "Не удалось отправить {count} отложенную сдачу — сервер отклонил её, данные утеряны, введите заново",

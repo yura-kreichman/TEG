@@ -1318,7 +1318,8 @@
       "ticketsSub": "Göstəricilər lazım deyil — gəlir satılmış sifarişlərə görə hesablanır",
       "gameRoomBlockedPrefix": "Bitir",
       "gameRoomBlockedSuffix": "aktiv startlar:",
-      "gameRoomGoToAssetButton": "Aktivə keç"
+      "gameRoomGoToAssetButton": "Aktivə keç",
+      "gameRoomCarriedOver": "«{asset}»: hələ davam edən startlar var ({count}). Onların ödənişi növbəti nəticə təhvilinə düşəcək."
     },
     "offlineQueueHint": "Göndərilməni gözləyir: {count} hesabat — əlaqə olduqda avtomatik göndəriləcək",
     "offlineQueueDroppedHint": "Növbədəki {count} hesabat server tərəfindən rədd edildi və itdi — yenidən daxil edin",

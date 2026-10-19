@@ -4,8 +4,10 @@ import { requireOperator } from "@/lib/require-operator";
 import {
   computeLaunchAmount,
   roundToWholeCurrencyUnit,
+  lockZoneLaunchTiming,
   LAUNCH_PAYMENT_METHODS,
   LAUNCH_LOCK_TIMEOUT_MS,
+  LAUNCH_TIMING_TX_OPTIONS,
   type LaunchPricingMode,
   type LaunchRoundingMode,
 } from "@/lib/game-room";
@@ -45,7 +47,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
   // и просим повторить остановку заново с актуальным временем.
   if (isLocked && launch.endedAt && Date.now() - launch.endedAt.getTime() > LAUNCH_LOCK_TIMEOUT_MS) {
     await prisma.launch.updateMany({
-      where: { id, isOpen: false, paymentMethod: null },
+      where: { id, isOpen: false, paymentMethod: null, voidedAt: null },
       data: { isOpen: true, endedAt: null, amount: null, endedByOperatorId: null },
     });
     return NextResponse.json({ error: "Пауза истекла — пуск возобновлён, остановите заново" }, { status: 409 });
@@ -115,46 +117,43 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     }
   }
 
-  // Уже "заморожен" (см. /api/launches/[id]/lock) — endedAt/amount там уже
-  // зафиксированы серверным временем в момент открытия шторки, здесь их не
-  // трогаем заново (иначе сумма продолжила бы расти, ровно то, что должно
-  // было прекратиться после заморозки). Иначе (обычный стоп "fixed" — тот
-  // никогда не проходит через /lock, у него цена и так известна заранее) —
-  // считаем как раньше.
-  const endedAt = isLocked ? launch.endedAt! : new Date();
-  let amount = isLocked
-    ? Number(launch.amount)
-    : computeLaunchAmount(
-        {
-          pricingMode: launch.pricingMode as LaunchPricingMode,
-          priceSnapshot: launch.priceSnapshot,
-          durationMinutesSnapshot: launch.durationMinutesSnapshot,
-          roundingModeSnapshot: launch.roundingModeSnapshot as LaunchRoundingMode | null,
-          minAmountSnapshot: launch.minAmountSnapshot,
-        },
-        launch.startedAt,
-        endedAt
-      );
-  // Округление суммы до целой валютной единицы (запрос пользователя
-  // 2026-07-27) — только "per_minute", "fixed" уже целая цена владельца;
-  // уже применено при заморозке, если isLocked — повторно не округляем.
-  if (!isLocked && launch.pricingMode === "per_minute" && launch.zone.amountRoundingEnabled) {
-    amount = roundToWholeCurrencyUnit(amount);
-  }
-  if (legs) {
-    try {
-      validateSplitLegs(legs, amount, LAUNCH_PAYMENT_METHODS);
-    } catch (err) {
-      if (err instanceof InvalidPaymentSplitError) {
-        return NextResponse.json({ error: err.message }, { status: 400 });
-      }
-      throw err;
-    }
-  }
-
   let updated;
+  let amount: number;
   try {
-    updated = await prisma.$transaction(async (tx) => {
+    ({ updated, amount } = await prisma.$transaction(async (tx) => {
+      // Время остановки — только ПОСЛЕ лока зоны, общего со сдачей итогов
+      // (пересменка 2026-10-19, разбор у lockZoneLaunchTiming): иначе стоп,
+      // посчитанный до сдачи и записанный после, не попадает ни в одну.
+      await lockZoneLaunchTiming(tx, launch.zoneId);
+
+      // Уже "заморожен" (см. /api/launches/[id]/lock) — endedAt/amount там уже
+      // зафиксированы серверным временем в момент открытия шторки, здесь их не
+      // трогаем заново (иначе сумма продолжила бы расти, ровно то, что должно
+      // было прекратиться после заморозки). Иначе (обычный стоп "fixed" — тот
+      // никогда не проходит через /lock, у него цена и так известна заранее) —
+      // считаем как раньше.
+      const endedAt = isLocked ? launch.endedAt! : new Date();
+      let amount = isLocked
+        ? Number(launch.amount)
+        : computeLaunchAmount(
+            {
+              pricingMode: launch.pricingMode as LaunchPricingMode,
+              priceSnapshot: launch.priceSnapshot,
+              durationMinutesSnapshot: launch.durationMinutesSnapshot,
+              roundingModeSnapshot: launch.roundingModeSnapshot as LaunchRoundingMode | null,
+              minAmountSnapshot: launch.minAmountSnapshot,
+            },
+            launch.startedAt,
+            endedAt
+          );
+      // Округление суммы до целой валютной единицы (запрос пользователя
+      // 2026-07-27) — только "per_minute", "fixed" уже целая цена владельца;
+      // уже применено при заморозке, если isLocked — повторно не округляем.
+      if (!isLocked && launch.pricingMode === "per_minute" && launch.zone.amountRoundingEnabled) {
+        amount = roundToWholeCurrencyUnit(amount);
+      }
+      if (legs) validateSplitLegs(legs, amount, LAUNCH_PAYMENT_METHODS);
+
       // CAS вместо обычного update (аудит 2026-07-25: проверка !launch.isOpen
       // выше читалась ДО транзакции — двойной клик "Стоп" на одном пуске с
       // оплатой балансом "По факту" мог пройти её дважды и дважды списать
@@ -165,8 +164,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
       // "замороженного" пуска (см. /lock) требует isOpen:false +
       // paymentMethod:null (переход из "ждёт оплату" в "оплачен") — иначе
       // легитимный стоп уже "замороженного" пуска сам себя бы отклонял.
+      //
+      // У "замороженного" сверяем ещё и сам endedAt, прочитанный выше: если
+      // заморозка за это время истекла, пуск вернулся в игру, прошла сдача
+      // итогов и его заморозили снова, здесь записалось бы СТАРОЕ время —
+      // раньше границы той сдачи, и пуск не попал бы ни в одну. voidedAt:null —
+      // аннулированный идущий пуск тоже лежит как isOpen:false +
+      // paymentMethod:null, оплатить его нельзя.
       const stopResult = await tx.launch.updateMany({
-        where: isLocked ? { id, isOpen: false, paymentMethod: null } : { id, isOpen: true },
+        where: isLocked
+          ? { id, isOpen: false, paymentMethod: null, voidedAt: null, endedAt: launch.endedAt }
+          : { id, isOpen: true, voidedAt: null },
         data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id, paymentMethod, abonementWalletId },
       });
       if (stopResult.count === 0) throw new LaunchAlreadyStoppedError();
@@ -209,9 +217,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
         });
       }
 
-      return tx.launch.findUniqueOrThrow({ where: { id } });
-    });
+      return { updated: await tx.launch.findUniqueOrThrow({ where: { id } }), amount };
+    }, LAUNCH_TIMING_TX_OPTIONS));
   } catch (err) {
+    if (err instanceof InvalidPaymentSplitError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
     }

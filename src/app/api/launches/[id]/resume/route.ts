@@ -37,10 +37,12 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/launches/[
   try {
     // CAS — где paymentMethod ещё null (только зафиксированный, не
     // оплаченный) — уже оплаченный пуск "возобновить" нельзя, это стёрло бы
-    // реальную завершённую операцию.
+    // реальную завершённую операцию. voidedAt:null — аннулированный идущий
+    // пуск лежит так же (isOpen:false, paymentMethod:null), воскрешать его
+    // нельзя.
     await prisma.$transaction(async (tx) => {
       const result = await tx.launch.updateMany({
-        where: { id, isOpen: false, paymentMethod: null },
+        where: { id, isOpen: false, paymentMethod: null, voidedAt: null },
         data: { isOpen: true, endedAt: null, amount: null, endedByOperatorId: null },
       });
       if (result.count === 0) throw new LaunchNotLockedError();

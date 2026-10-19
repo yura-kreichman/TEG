@@ -90,13 +90,20 @@ export async function getPendingCashRevenueEventsByZone(
         // ровно тот перекос, который прожил час на проде 3 сентября, поэтому
         // здесь сознательно занижаем: «За вход», оплаченный вперёд и ещё
         // идущий, в оценку не попадёт, и обрезка отработает как раньше.
+        //
+        // Окно — по ОСТАНОВКЕ, как и в самой сдаче (aggregateGameRoomLaunches).
+        // «По факту», начатый до сдачи на пересменке и оплаченный после неё
+        // (2026-10-19), лежит в ящике следующего сотрудника; по старту он
+        // выпадал из оценки вовсе. Раньше старт и стоп всегда попадали в одно
+        // окно (идущий пуск блокировал сдачу), поэтому для прошлых данных
+        // ничего не меняется.
         const launches = await client.launch.findMany({
           where: {
             zoneId: zone.id,
             voidedAt: null,
             paymentMethod: "cash",
             amount: { not: null },
-            startedAt: window,
+            endedAt: window,
           },
           select: { startedAt: true, endedAt: true, amount: true },
         });

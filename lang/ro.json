@@ -1318,7 +1318,8 @@
       "ticketsSub": "Nu sunt necesare citiri — venitul se calculează din comenzile vândute",
       "gameRoomBlockedPrefix": "Finalizează",
       "gameRoomBlockedSuffix": "porniri active în",
-      "gameRoomGoToAssetButton": "Mergi la activ"
+      "gameRoomGoToAssetButton": "Mergi la activ",
+      "gameRoomCarriedOver": "«{asset}»: încă sunt porniri în desfășurare ({count}). Plata lor va intra în următoarea predare a rezultatelor."
     },
     "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare",
     "offlineQueueDroppedHint": "{count} predare(i) din coadă au fost respinse de server și pierdute — reintroduceți-le manual",

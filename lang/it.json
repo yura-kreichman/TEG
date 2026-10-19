@@ -1318,7 +1318,8 @@
       "ticketsSub": "Le letture non servono — l'incasso è calcolato dagli ordini venduti",
       "gameRoomBlockedPrefix": "Termina",
       "gameRoomBlockedSuffix": "avvii attivi in",
-      "gameRoomGoToAssetButton": "Vai all'attivo"
+      "gameRoomGoToAssetButton": "Vai all'attivo",
+      "gameRoomCarriedOver": "«{asset}»: ci sono ancora avvii in corso ({count}). Il loro pagamento entrerà nella prossima consegna dei risultati."
     },
     "offlineQueueHint": "In attesa di invio: {count} chiusura/e — verranno inviate automaticamente non appena online",
     "offlineQueueDroppedHint": "{count} chiusura/e in coda sono state rifiutate dal server e perse — reinseriscile manualmente",

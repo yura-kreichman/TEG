@@ -1318,7 +1318,8 @@
       "ticketsSub": "Koʻrsatkichlar shart emas — tushum sotilgan buyurtmalar boʻyicha hisoblanadi",
       "gameRoomBlockedPrefix": "Tugating",
       "gameRoomBlockedSuffix": "faol pusklar:",
-      "gameRoomGoToAssetButton": "Aktivga o'tish"
+      "gameRoomGoToAssetButton": "Aktivga o'tish",
+      "gameRoomCarriedOver": "«{asset}»: hali davom etayotgan pusklar bor ({count}). Ularning toʻlovi keyingi yakunlarni topshirishga kiradi."
     },
     "offlineQueueHint": "Yuborilishini kutmoqda: {count} ta topshiriq — aloqa boʻlganda avtomatik yuboriladi",
     "offlineQueueDroppedHint": "Navbatdagi {count} ta topshiriq server tomonidan rad etildi va yoʻqoldi — qayta kiriting",
