@@ -7,6 +7,7 @@ import { dispatchDailyCashSummary, getEnabledChannels } from "./dispatch";
 import type { DailyCashPending } from "./types";
 import { getDictionary } from "@/lib/i18n";
 import { isLocale } from "@/lib/locales";
+import { deleteChatMessage } from "@/lib/telegram-bot";
 import { removeOrMarkMessage } from "./resync";
 
 function isUniqueConstraintViolation(err: unknown): boolean {
@@ -297,7 +298,10 @@ async function maybeSendOnEvent(
  * — если по точке+бизнес-дню сводка ещё не уходила — проверяет через
  *   maybeSendOnEvent, пора ли отправлять (зоны + смены);
  * — если уже уходила — это досдача (notifyDailyCashLateSubmission), независимо
- *   от режима отправки (fixed тоже должен обновляться при досдаче).
+ *   от режима отправки (fixed тоже должен обновляться при досдаче). Досдача
+ *   новой СДАЧЕЙ ИТОГОВ сводку не правит на месте, а заменяет: старое
+ *   сообщение удаляется, новое за весь день уходит в конец чата (см.
+ *   replaceDailyCashSummary).
  * Предохранитель на границе бизнес-дня (планировщик, forcedIncomplete) остаётся
  * единственной сетью для случая "зона/смена за весь день так и не закрылась".
  */
@@ -308,7 +312,7 @@ export async function onResultsSubmission(pointId: string, tenantId: string, at:
   const businessDate = businessDateKey(bounds, timezone);
   const alreadySent = await prisma.dailyCashSummaryDelivery.findFirst({ where: { pointId, businessDate } });
   if (alreadySent) {
-    await notifyDailyCashLateSubmission(pointId, tenantId, at);
+    await notifyDailyCashLateSubmission(pointId, tenantId, at, { replace: true });
     return;
   }
 
@@ -342,8 +346,18 @@ export async function onShiftClosed(pointId: string, tenantId: string, at: Date)
  * существующее сообщение (settings.updateOnLateSubmission), либо отправить
  * новое. Вызывается реактивно из submit-results/work-time-shifts роутов, а
  * не планировщиком.
+ *
+ * replace — повод в НОВОЙ сдаче итогов (onResultsSubmission), а не в правке
+ * уже учтённого: тогда при "обновлять при досдаче" сообщение заменяется, а
+ * не правится на месте (replaceDailyCashSummary). Правки владельца, аванс и
+ * премия при закрытии смены по-прежнему правят сообщение там, где оно стоит.
  */
-export async function notifyDailyCashLateSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
+export async function notifyDailyCashLateSubmission(
+  pointId: string,
+  tenantId: string,
+  at: Date,
+  options: { replace?: boolean } = {}
+): Promise<void> {
   const [settingsRow, tenant] = await Promise.all([
     prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } }),
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true, timezone: true } }),
@@ -388,6 +402,12 @@ export async function notifyDailyCashLateSubmission(pointId: string, tenantId: s
     return;
   }
 
+  const hasTelegramMessage = existingDeliveries.some((d) => d.channelType === "telegram" && d.externalMessageId);
+  if (options.replace && settings.updateOnLateSubmission && hasTelegramMessage) {
+    await replaceDailyCashSummary(pointId, tenantId, settings, bounds, businessDate);
+    return;
+  }
+
   const data = await buildDailyCashSummaryData(pointId, bounds, []);
   if (!data) return;
 
@@ -412,4 +432,74 @@ export async function notifyDailyCashLateSubmission(pointId: string, tenantId: s
       update: { externalMessageId: result.externalMessageId },
     });
   }
+}
+
+/**
+ * Новая сдача итогов после уже отправленной "Кассы за день": старое сообщение
+ * удаляется, а новое, за весь день, уходит в конец чата (запрос владельца
+ * 2026-10-19, Керен Центр). Сводка по-прежнему уходит сразу, как только день
+ * выглядит законченным, — но если потом кто-то ещё сдал итоги (пересменка,
+ * сотрудник ушёл из-за дождя, а другой пришёл через час), итог дня всё равно
+ * оказывается последним сообщением, а не застревает посреди дня, отредактированный
+ * на старом месте.
+ *
+ * Push уходит обычный, без 🔄: в чате это действительно новое сообщение.
+ *
+ * Порядок — сначала новое, потом удаление старого: не дошло новое — в чате
+ * остаётся прежняя сводка, а не пустота. Удалить своё сообщение бот может 48
+ * часов, досдача в тот же бизнес-день в них укладывается; не вышло — только
+ * в журнал, новое сообщение уже актуально.
+ *
+ * Под локом точки: две сдачи почти одновременно (две зоны отдельными сдачами,
+ * два сотрудника) иначе обе отправили бы новое и удалили бы одно и то же
+ * старое — в чате осталось бы две сводки. Под локом вторая видит уже новое
+ * сообщение первой и заменяет его.
+ */
+async function replaceDailyCashSummary(
+  pointId: string,
+  tenantId: string,
+  settings: DailyCashSummarySettingsData,
+  bounds: { start: Date; end: Date },
+  businessDate: Date
+): Promise<void> {
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`daily-cash:${pointId}`}))`;
+      const deliveries = await tx.dailyCashSummaryDelivery.findMany({ where: { pointId, businessDate } });
+      const oldMessageId = deliveries.find((d) => d.channelType === "telegram")?.externalMessageId ?? null;
+
+      const data = await buildDailyCashSummaryData(pointId, bounds, []);
+      if (!data) return;
+
+      const results = await dispatchDailyCashSummary(tenantId, data, settings, {});
+      const sentAt = new Date();
+      for (const result of results) {
+        if (!result.ok) continue;
+        await tx.dailyCashSummaryDelivery.upsert({
+          where: { pointId_businessDate_channelType: { pointId, businessDate, channelType: result.channelType } },
+          create: {
+            tenantId,
+            pointId,
+            businessDate,
+            channelType: result.channelType,
+            externalMessageId: result.externalMessageId,
+            sentAt,
+          },
+          update: { externalMessageId: result.externalMessageId, sentAt },
+        });
+      }
+
+      const sentTelegram = results.some((r) => r.channelType === "telegram" && r.ok);
+      if (!sentTelegram || !oldMessageId) return;
+      const channel = await tx.tenantSummaryChannel.findFirst({
+        where: { tenantId, channelType: "telegram", pointId: null, enabled: true, chatStatus: "active" },
+      });
+      if (channel?.chatId && !(await deleteChatMessage(channel.chatId, oldMessageId))) {
+        console.error("daily cash replaced, old message not deleted", { pointId, messageId: oldMessageId });
+      }
+    },
+    // Внутри — отправка в Telegram с повторами (до ~10 с при сбоях сети)
+    // и ожидание лока, пока заменяет параллельная сдача.
+    { timeout: 30_000, maxWait: 20_000 }
+  );
 }
